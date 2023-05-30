@@ -1,0 +1,290 @@
+Design pattern
+Xuất phát từ Gang of Four (GoF) là 4 lập trình viên sáng lập ra 23 design pattern
+Design pattern nên được áp dụng trong phạm vi từng module của ứng dụng.
+
+Nhóm nào? Khái niệm? Tên gọi?
+Cách dùng
+Ưu điểm khi mở rộng code. Nhược điểm khi sử dụng. SS
+Ref tới
+Phân tích
+
+
+
+# SOLID
+-> S: 1 class chỉ làm 1 nhiệm vụ => hiểu sai. Đúng phải là 1 class chỉ nên có 1 lý do để thay đổi. 
+1 class thực tế có thể làm nhiều việc nhưng chỉ có 1 trách nhiệm, nếu 1 class thay đổi tức trách nhiệm của nó bị đổi. Nếu 1 class có 2 lý do để thay đổi, ta phải tách 2 trách nhiệm đó ra thành 2 class riêng. 
+
+- Tách logic ra 1 class riêng và gọi hàm class đó là xong
+
+-> O: viết hàm sao cho sửa 1 tính năng k thuộc hàm đó thì sẽ kp sửa hàm đó.
+K được fix hard code để tránh sửa nh
+
+-> L: Hình vuông là hcn thì thay thế được hcn ở mọi chỗ
+
+-> I: phân tách giao diện
+
+-> D: class high level k phụ thuộc vào class low level. Cả 2 nên phụ thuộc vào abstraction.  
+VD: class A có biến class B và phụ thuộc vào class B => thế là k được. Khi đó ta tạo interface cho B rồi tạo instance cho interface đó trong A thay vì tạo instance của B trong A trực tiếp, vì A là high level mà phụ thuộc vào low level class trực tiếp là k được
+
+
+
+# State pattern
+Thuộc nhóm behavior. Dùng khi 1 đối tượng thay đổi hành vi tùy theo trạng thái nội tại của nó. Do đó gọi là state pattern.
+
+- Mỗi state viết ở 1 class riêng và thêm từng hành vi tương ứng.
+- Viết class Context là đối tượng chứa biến state, rồi thực hiện các hành động tùy theo state.
+
+Ưu điểm: Nếu thêm 1 state mới hay sửa đổi 1 state cũ, class Context k đổi. 
+
+=> ref tới "Java_OOP_SE / ## Design pattern / # State pattern"
+
+
+
+# Strategy pattern
+Thuộc nhóm behavior pattern. Dùng khi có nhiều case if else để làm 1 thứ gì đó, mỗi case có 1 strategy xử lý hoàn toàn khác nhau.
+
+- Tách từng hàm xử lý ra 1 function or 1 class riêng. 
+- Dùng các phương pháp tối ưu nhất để lấy ra hàm thích hợp
+
+Khi cần thêm logic, chỉ cần thêm hàm or class mới và bổ sung case chứ k sửa code cũ
+Nếu chỉ có 2 cases quá ít hay xử lý ngắn thì việc chia ra lại làm code rối hơn
+
+-> ref tới "Java_OOP_SE / Design Pattern"
+
+
+
+# Observer pattern
+Thuộc nhóm behavior pattern. Dùng khi có nhiều user cùng subscribe vào 1 thứ, khi thứ đó thay đổi thì mọi user đều nhận được và perform các actions khác nhau. Các user là các Observer quan sát sự thay đổi.
+
+- Publisher add các observer vào 1 list trong nó. Khi phát sự kiện, nó gọi hàm xử lý của các observer là xong.
+
+(Strategy này bắt buộc phải dùng, k có nhược điểm gì cả)
+
+Các cơ chế subscribe event hay publish 1 event mới đều có thể implement bên trong với cơ chế tương tự.
+Vd ta click 1 button thì in ra gì đó với addEventListener, thực tế nó chỉ cần thêm 1 hàm in vào cuối hàm click thôi
+Trong C# cơ chế tương tự khi object A publish event B cho object C bắt. Thực tế C subscribe vào A với event B làm params mà thôi
+
+VD: ứng dụng trong update newfeeds của facebook. Mỗi người có 1 database riêng.
+TH1: ta chỉ xét khi người dùng offline và đăng nhập vào thì phải thấy newfeeds mới
+
+-> Push Strategy dùng Observer pattern
+VD ronaldo có 1 triệu người theo dõi. Khi ronaldo đăng 1 bài mới thì khi follower đăng nhập vào sẽ thấy bài của ronaldo
+
+Để làm v thì nó sẽ update database của tất cả mọi người follow rolnaldo khi rolnaldo đăng newfeeds(push lên database của họ). VD người X follow ronaldo thì sẽ lưu là:
+X ---- Rolnaldo ---- Id của newfeed mới của rolnaldo
+Khi người X đăng nhập vào thì sẽ query mỗi database của chính họ để lấy ra các newfeeds mới.
+ 
+=> Cách này nhanh và áp dụng thực tế. Nhưng ghi quá nhiều thứ vào db, VD rolnaldo có 1 triệu follower sẽ phải update thêm 1 triệu bản ghi. Khi đó tốc độ update k như nhau. 
+facebook sẽ phải dùng thuật toán để xem ai thg online face nhiều thì ưu tiên update database của họ trước. Còn vấn đề update bản ghi nhanh hay chậm thì các hệ thống lớn phải chi tiền để mở rộng theo chiều ngang hoặc dọc thôi. Số lượng người có 1 triệu người theo dõi cũng k nhiều.
+
+-> Pull Strategy (kp observer pattern)
+Để update newfeeds khi đăng nhập, họ chỉ lưu vào database của ronaldo thôi. 1 người đăng nhập sẽ check newfeeds database của tất cả mọi người mà họ theo dõi và update vào newfeeds của mình
+
+=> Push strategy là update đồng bộ mọi thứ, còn pull strategy là chỉ update khi cần dùng nên tránh lãng phí databaes và nhẹ hơn cho server vì quá trình update của rolnaldo nhanh hơn. Nhưng thời gian chờ update newfeeds rất lâu vì nếu 1 người follow 1 triệu người khác, nó sẽ gửi 1 request lên server và server phải check database newfeeds của 1 triệu người khác để update cho nó. Nó gây ddos vì chỉ cần đăng nhập thôi mà đã phải check hàng đống thứ r.
+Tuy nhiên số lượng người follow 1 triệu người khác là không nhiều, thậm chí chẳng có ai vì việc 1 người follow người khác thì họ phải bấm thủ công nên cùng lắm là 1000 người thôi.
+
+=> Cả 2 strategy đều ok để update newfeeds. Hệ thống lớn nên dùng push để tránh update newfeeds quá lâu. Hệ thống nhỏ ít người hơn thì dùng pull cho tiết kiêm db.
+
+TH2: vấn đề update realtime
+- Người X sau khi đăng nhập có thể ping database liên tục sau mỗi khoảng thời gian ngắn để check có tin mới hay không. Cách này khả thi khi dùng push strategy vì pull họ phải ping quá nhiều database để check.
+- Sử dụng socket, đăng nhập rồi thì 1 triệu follower sẽ tạo ra 1 triệu socket tới ronaldo. Cách này cũng ok vì ta chỉ tạo socket cho những người đang online thôi => K nên vì ví dụ ronaldo đăng nhập sẽ tạo ra rất nhiều socket nhưng người bth đăng nhập thì tạo ra ít socket thôi. Trong thực tế facebook dùng cách ping database.
+
+=> Tức là dùng cách nào phụ thuộc vào điều kiện thực tế rất nhiều. VD 1 người k thể follow quá nhiều người khác nhưng 1 người lại có thể được follow bởi rất nhiều người. Hay việc tạo socket 1 triệu người tới ronaldo nghe thì bất khả thi nhưng nếu chỉ tạo cho những người đang online thì lại k có nhiều.
+
+
+
+# Chain of Responsibility Pattern
+Thuộc nhóm behavior. Dùng khi 1 hành động buộc phải đi qua hàm xử lý của nhiều class. Chain of Responsibility cho object đi qua 1 chuỗi các class xử lý liên tiếp nhau và cho ra kết quả cuối. 
+
+Nó khác với Strategy Pattern vì không phải check if else rồi đi vào handler nào, mà object buộc phải đi qua 1 chuỗi các class handler và class đó quyết định có xử lý hay không, có thể phải xử lý bởi 2 hay nhiều handlers.
+Nó khác Facade và template pattern vì có thể dừng lại ở 1 handler nào đó chứ k nhất thiết phải đi hết, nếu v trong Facade ta phải dùng if else rất khó chịu.
+=> Nó như là request của user buộc phải đi qua 1 list các middleware ở server, ở 1 middleware bất kỳ có thể quyết định dừng hay gắn thông tin rồi đi tiếp
+
+- Từng Handler tạo ra class riêng kế thừa từ base, đều có hàm setNextHandler(nextHandler). Viết xử lý cho từng handler như 1 middleware, có chuyển sang handler tiếp theo hay không
+- Khởi tạo từng handler thành chuỗi và gọi từ handler đầu tiên
+
+Ưu điểm: nên dùng khi có thể vì dễ quản lý chuỗi các handler cũng như từng handler
+
+ref tới "Java_OOP_SE / Design Pattern"
+
+Hàm xây chuỗi handler có thể làm thành 1 class riêng. Nó tương đương với hàm Configure trong .NET hay việc viết liên tục các middleware trong NodeJS.
+
+
+
+# Template pattern
+Thuộc nhóm behavior. Dùng khi nhiều class có chức năng tương đồng, và chức năng đó là 1 quy trình dài cần nhiều hàm. Template tạo bộ khung cho chức năng đó. 
+
+- Viết 1 template class có đủ hàm của chức năng.
+- Từng class kế thừa implement điểm riêng của nó
+
+Ưu điểm: Cô lập chức năng ra 1 class riêng, tính tái sử dụng cao. 
+
+Nó na ná Facade Pattern nhưng Facade là 1 hàm cần 5 class thực hiện thì gom vào 1 class, còn cái này thì 1 hàm cần gọi 5 hàm khác thì gom vào 1 class
+
+ref tới "Java_OOP_SE / Design Pattern"
+
+Trong microsoft company dùng Template pattern rất nhiều. Vì có nhiều class chỉ có hàm Execute hoặc Invoke kèm các hàm con khác bên trong => Kết hợp Facade và Template đều được nhưng k đúng lắm vì nó k có nhiều điểm chung nên chỉ định nghĩa interface, k định nghĩa abstract class
+
+
+
+# Facade pattern
+Thuộc nhóm Structural. Một quy trình xảy ra gồm sự tham gia của nhiều subsystem (class) thì nên tạo 1 class chung chứa các subsystem để thực hiện quy trình đó. Facade(bề ngoài), tức ta cung ra 1 class gom tất cả các class xử lý phức tạp lại và thực hiện trong đó rồi cung interface ra ngoài thôi. 
+
+- Trong 1 luồng xử lý phức tạp cần 5 class, ta tạo ra 1 class Facade chứa 5 biến 5 class đó rồi gom hết xử lý trong hàm handle, cung interface chứa hàm handle ra là xong.
+
+Khi thêm xử lý logic mới thì viết thêm class xử lý và thêm vào hàm handle thôi. Hàm handle chỉ gọi hàm từng class chứ chi tiết viết bên trong từng class xử lý riêng.
+
+-> ref tới "# Java_OOP_SE / # Facade Pattern"
+
+Nếu nắm vững strategy pattern hay state pattern (ref tới "Java_OOP_SE") thì mọi thứ ta đều biết là cấu trúc đều chia nhỏ cấp độ class con và add như 1 thuộc tính của class cha. Viết logic xử lý rồi cung interface ra => đó là cấu trúc basic nhất phải nắm vững
+
+VD trong Java: 1 system VideoConverter tuân thủ SOLID rất chuẩn
+
+public interface Codec {
+}
+public class MPEG4CompressionCodec implements Codec {
+  public String type = "mp4";
+}
+public class OggCompressionCodec implements Codec {
+  public String type = "ogg";
+}
+
+public interface VideoFile {
+  public void decode(String fileName);
+}
+public class VideoFileImpl implements VideoFile {
+  private String fileName;
+  public VideoFileImpl(String fileName) {
+    this.fileName = fileName;
+  }
+  @Override
+  public void decode(String fileName) {
+    System.out.println("Decoding file: " + fileName);
+  }
+}
+
+public class BitrateReader {
+  public static VideoFile read(VideoFile file, Codec codec) {
+    System.out.println("Reading file: " + file + " with codec: " + codec);
+    return file;
+  }
+  public static VideoFile convert(VideoFile buffer, Codec codec) {
+    System.out.println("Converting file: " + buffer + " with codec: " + codec);
+    return buffer;
+  }
+}
+
+public class VideoConverter {
+  public VideoFile convert(String fileName, Codec codec) {
+    VideoFile file = new VideoFileImpl(fileName);
+    VideoFile buffer = BitrateReader.read(file, codec);
+    VideoFile result = BitrateReader.convert(buffer, codec);
+    return result;
+  }
+}
+
+// Dù VideoConverter có hàm convert đã đơn giản hóa mọi công việc như 1 FacadePattern rồi nhưng người dùng vẫn thấy phức tạp vì phải hiểu về codec. Ta tạo thêm facade pattern nữa vào:
+public class VideoConversionFacade {
+  public VideoFile convertVideo(String fileName, String format) {
+    Codec codec;
+    if (format.equals("mp4")) {
+      codec = new MPEG4CompressionCodec();
+    } else {
+      codec = new OggCompressionCodec();
+    }
+
+    VideoConverter converter = new VideoConverter();
+    VideoFile result = converter.convert(fileName, codec);
+
+    return result;
+  }
+}
+
+// => Phía người dùng trở nên đơn giản hơn hẳn:
+VideoConversionFacade facade = new VideoConversionFacade();
+VideoFile result = facade.convertVideo("video.avi", "mp4");
+
+
+
+# Proxy Pattern
+Thuộc nhóm Structural. Dùng khi ta cần quản lý việc truy cập tới đối tượng thực. Vd ta thường check type hợp lệ hoặc đủ quyền mới gọi hàm xử lý thực. Hàm xử lý thực k chỉ tập trung xử lý chứ k làm các vc đó, mà class Proxy được ủy quyền mới làm việc điều hướng, tổng hợp lên object cuối cùng rồi gọi xử lý thực.
+
+- Tạo class ProxyHandler chứa biến RealHandler. Nó check các thứ trước khi gọi hàm của RealHandler
+
+Ưu điểm: làm điểm trung gian có vai trò che giấu enpoint, chống attack, giới hạn quyền truy cập hoặc hỗ trợ việc gọi từ xa. Khi chỉnh sửa logic chỉ cần sửa trong class Proxy
+
+
+
+# Adapter Pattern
+Thuộc nhóm Structural. Dùng khi ta muốn chuyển đổi giao diện của 1 lớp thành 1 giao diện khác được mong đợi bởi client. Adapter chính là lớp trung gian chuyển đổi giúp tương thích với class gốc. 
+VD: Youtube chỉ cho thanh toán bằng thẻ Visa, nhưng phía client k có Visa mà chỉ có Momo. Thay vì chỉnh sửa phía client bắt phải có Visa, ta tạo class MomoAdapter chuyển đổi giao diện cho phép thanh toán bằng Momo phía client. Đây là bài toán thực và có thể giải quyết bằng "Cách tạo dịch vụ Visa ảo từ Momo".
+
+- Client có class X k tương thích
+- Tạo class Adapter chuyển đổi class X thành tương thích rồi gọi hàm bth
+
+Logic của việc convert được tách riêng. Logic của class gốc k đổi. Nếu có nhiều giao diện khác nhau phía client, mỗi cái tạo 1 adapter là xong
+
+Pattern cấu trúc cho ta 1 hướng viết class adapter, nó k giúp giải quyết logic convert như thế nào.
+
+Bài toán chuyển đổi giá cả: 
+Thực tế phải lấy price feed chuyển giá qua các API dynamic vì giá cả có sự biến động, k thể fix cứng. Với các loại tiền biến động cao (token trong blockchain) thì nên fetch price liên tục sau vài giây để tránh mất giá. Tiền fiat giá cả k biến động nh. 
+Nguồn price feed phải đủ uy tín. Chỉ cần k chênh giá quá nhiều so với các nguồn khác. Trong blockchain, ta có thể tự cung price feed nếu có các pool tự tạo.
+
+Thanh toán chênh giá:
+VD cần thanh toán 1 USD bằng Visa mà chỉ có Momo VNĐ.
+Nếu giá cả k biến động => tính như bth, chỉ cần làm tròn lên là được
+Nếu giá cả biến động nhiều:
+- Nếu user muốn nạp vào 1 lượng tiền bằng VNĐ -> chỉ cần convert đúng giá mà chuyển sang USD là được. Khi xử lý chính, sẽ tự chuyển sang USD đúng lượng tương ứng, VD tính là 1USD mà lúc xử lý nó giảm còn 0.99 USD thì cứ hiển thị 0.99 USD => nên cảnh báo người dùng
+- Nếu user muốn nạp vào 1 lượng VNĐ cho đủ 1USD:
+Trong web3 có thông số slippage tùy vào token biến động hay không mà khác nhau. VD slippage 0.5% thì cảnh báo người dùng có thể mất x + 0.5%x => trong SM sau khi swap sẽ trả lại token thừa. Có thể cho người dùng tùy chọn slippage vì kiểu gì cũng chả lại tiền thừa mà.
+Trong web2 k chắc về slippage thì nên chủ động yêu cầu cộng 1 lượng margin of error tầm 1% để đảm bảo đạt target 
+
+
+
+# Bridge Pattern
+Thuộc nhóm Structural. Dùng khi muốn tách phần abstraction và implementation ra để phát triển độc lập với nhau. Class này chỉ giúp đưa ra 1 cấu trúc giúp phân tách ra từng phần, dễ bảo trì và tái sử dụng, k giúp xử lý logic
+
+Ví dụ: ta có 2 table product và order. Đôi lúc product ta truy cập bằng MySQL, đôi lúc order ta truy cập bằng PostgreSQL và ngược lại.
+Abstraction là interface cung các hàm thao tác với database chung chung như ExecuteQuery.
+Implementation là code logic cho implement cái interface kia. 2 class MySQL và PostgreSQL implement hàm ExecuteQuery khác nhau thì là implementation.
+Concrete implementation là thứ người dùng gọi thực sự để lấy data từ từng bảng một như Create, Delete, Put, Read
+=> Bridge class ở đây chính là class Concrete implementation. Làm cầu nối giữa người dùng k gọi trực tiếp vào Abstraction mà gọi thông qua Concrete implementation.
+
+- Abstraction là level thấp cần gọi
+- Tạo class ConcreteImplementation làm bridge chứa biến Abstraction (nhận vào từ constructor luôn), rồi implement các hàm để client gọi.
+
+Ưu điểm: tách từng phần xử lý. Đổi abstraction k cần đổi implementation và ngược lại.
+VD ở trên muốn tương tác table nào dùng loại DB nào cũng được.
+
+Trong dự án C# có dùng pattern này. Đó là class Repository xử lý từng database chính là bridge class để client tương tác đó.
+
+
+
+# Prototype pattern
+Thuộc nhóm creational. Dùng khi cần tạo nhiều đối tượng gần giống nhau, khi clone 1 object thành 1 object khác nhưng chỉ đổi 1 vài trường.
+
+- Sử dụng hàm clone ở internal mọi class luôn và con gọi clone của cha nếu có kế thừa, dùng ép kiểu
+- Tự viết hàm clone dùng new. Có thể nhét vào copy constructor or tạo r gán thủ công như nhau
+
+=> ref tới "Java_OOP_SE" => Phiên bản java đã chuẩn rồi
+
+Mé trong JS k có hàm clone mà dùng Object.create(<object cần clone>); nên là VD hướng đối tượng chuẩn nên xem trong java
+
+
+
+# Builder Pattern
+Thuộc nhóm Creational. Khi tạo ra 1 đối tượng nào đó mà phải xây từng bước rất nhiều thứ. Mỗi builder có thể xây cùng 1 thứ nhưng theo nhiều cách khác nhau.
+=> Builder pattern đem lại cho ta cấu trúc code tốt nhất cho việc này.
+
+- Xây class builder có hàng loạt hàm setter return this. Hàm build cuối cùng sẽ return new đối tượng thực.
+
+Nhược điểm: chỉ dùng khi xây 1 đối tượng mà từng trường có sự phức tạp, nếu 1 đối tượng đơn giản thì dùng builder pattern làm nó trở nên rối hơn, khi đó dùng constructor bth vẫn hơn chứ.
+
+-> ref tới "Trong java project Ecobike ta từng dùng nó để xây 1 biến class thông qua nhiều hàm setter return this liên tục"
+
+
+
+# Singleton
+Thuộc nhóm Creational. Dùng khi cần tạo 1 instance global duy nhất truy cập được ở mọi nơi
+
+

@@ -1,0 +1,37 @@
+JSAdvance
+
+
+
+# Stylecode
+-> So sánh if else và switch case:
+if else là cấu trúc bậc thang
+switch case nhanh hơn if else đáng kể khi số lượng điều kiện lớn. Do mỗi điều kiện k phụ thuộc vào điều kiện trước đó nên dùng cấu trúc cây rẽ nhánh để thực hiện song song như trong mạch logic ấy sẽ nhanh hơn.
+=> Tuy nhiên trong Js khi muốn search theo key nên dùng new Map là nhanh nhất. Map là 1 instanceof Object nhưng sinh ra để search nhanh hơn
+
+
+
+# Datatype trong JS
+Kiểu dữ liệu nguyên thủy là kiểu kích thước cố định nên đơn giản và cải thiện tốc độ truy vấn biến. Do đó được lưu trong ngăn xếp cố định nên truy cập theo giá trị.
+Kiểu dữ liệu tham chiếu là kiểu có kích thước thay đổi nên k được lưu trữ trong ngăn xếp cố định mà phải lưu trên heap và truy cập theo địa chỉ reference nên tốc độ truy vấn biến chậm hơn. Như array, object,...
+
+-> K dùng typeof (cho frontend)
+
+
+
+# Design pattern JS
+
+
+
+# LRU cache
+Trong JS có WeakMap và WeakSet và WeakRef giúp giải phóng bộ nhớ reference tót hơn khi không sử dụng.
+Nhưng đối với bộ nhớ đệm từ xa thì k nên vì dữ liệu từ xa có thể bị xóa khỏi đệm 1 cách khó lường mà bên gọi không biết. Khi đó tốt nhất là sử dụng LRU cache
+
+Bộ cache giói hạn giá trị. VD 10 giá trị chẳng hạn. Thì khi thêm vào cache giá trị thứ 11, nó sẽ tự xóa cái Least Recent Used.
+Implement LRU cache trong JS: https://medium.com/dsinjs/implementing-lru-cache-in-javascript-94ba6755cda9
+
+
+
+# Other
+-> NodeJS có cli:
+node -> http.STATUS_CODES
+        Date.now()
