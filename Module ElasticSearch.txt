@@ -1,0 +1,277 @@
+ElasticSearch
+Phát triển bởi Elastic, mã nguồn mở
+Công ty này cũng sở hữu 2 dự án Kibana và LogStash cung đầy đủ ELK Stack. 
+
+Trong đó, logstash là dịch vụ thu thập data được triển khai phía client ta k dùng ở backend. Hiện nay người ta dùng Filebeat thay thế cho log stash vì nó nhẹ hơn, tốt hơn logstash vì logstash thất bại sẽ gây mất bản ghi
+
+Tại sao k dùng elastic search thay thế cho database? Vì nó chỉ phục vụ search nhanh, lưu data dạng object, chỉ dùng cho hệ thống phân tán. Còn database truyền thống có đủ tính ACID, lưu data dạng bảng, có relational giữa các bảng data
+
+
+
+# Basic
+-> Cài đặt ElasticSearch và Kibana bằng Docker:
+=> Có cloud cho elastic search tương tự rabbitmq có thể đăng ký. 
+
+Kibana và elasticsearch phải cùng 1 mạng host
+
+docker network create elastictest => tạo 1 network vì ta muốn ElasticSearch và Kibana tương tác với nhau cùng 1 mạng cung ra ngoài
+docker pull docker.elastic.co/elasticsearch/elasticsearch:8.8.2 => vào dockerhub cho phiên bản mới nhất
+docker run --name es-test --net elastictest -p 9200:9200 -p 9300:9300 -e "discovery.type=single-node" -it docker.elastic.co/elasticsearch/elasticsearch:8.8.2
+
+--> Fix lỗi:
+Ở phiên bản 8 k báo lỗi trực tiếp mà ghi vào file. Ta dùng wsl k tìm được file log ghi lỗi. Dùng version 7 sẽ show lỗi ngay trên cli thấy được. 
+Lỗi memory trong linux quá nhỏ: vào wsl -> chạy "sysctl -w vm.max_map_count=262144"
+Lỗi default discovery settings k phù hợp cho bản production, fix command option: -e "discovery.type=single-node"  
+
+--> Vào localhost:9200 để check elasticsearch đang chạy. 
+Ở version 7 tạo elasticsearch trực tiếp k cần mật khẩu hay token gì, mở http lên là được. Ở version 8, mỗi lần chạy sẽ sinh ra mật khẩu bảo mật và token riêng cho kibana, mở với https.
+Thực tế nó sinh ra 1 user mới trong wsl là elastic, cũng là username đăng nhập.
+
+Kibana tương tự dashboard của rabbitmq. Khi cài elasticsearch nhận được 1 cái token paste vào kibana để tương tác bằng giao diện. 
+
+***Tiếp:
+docker pull docker.elastic.co/kibana/kibana:8.8.1
+docker run --name kib-test --net elastictest -p 5601:5601 docker.elastic.co/kibana/kibana:8.8.1
+
+=> Mở với http://localhost:5601/?code=622883
+Vì host 0.0.0.0 k được config trong file yaml của kibana vì ta chạy thẳng cli, mặc định dùng localhost
+
+Nếu tắt đi và bất lại phải dùng:
+docker logs <hash> > test.txt => để xem log lấy password các thứ
+
+
+
+# Thao tác trên kibana
+-> Tab Devtool: Các lệnh thao tác rest api của elasticsearch đều tự động sinh ra với nhiều kiểu endpoint chức năng có sẵn, ta chỉ cần dùng luôn
+
+Add 1 record vào index test (id và version sinh tự động như mongodb):
+POST test/_doc
+{
+  "username": "Hello"
+}
+=> test là chỉ mục tự tạo nếu chưa có. Mọi tương tác đều phải xác định tác động tới 1 chỉ mục nào hay tác động toàn bộ.
+
+Add multi vào index test:
+POST test/_bulk
+{"create": {}}
+{"@timestamp": "2022-10-28", "username": "cr7"}
+{"create": {}}
+{"@timestamp": "2022-10-27", "username": "cr8"}
+
+Add multi vào nhiều index khác nhau, url k cần xđ index nữa
+POST _bulk
+{"create": { "_index": "test" }}
+{"@timestamp": "2022-10-28", "username": "cr7"}
+{"create": { "_index": "facebook" }}
+{"@timestamp": "2022-10-27", "username": "cr8"}
+
+Add kèm update:
+1) PUT test/_doc/100001
+{
+  "user": "cr7"
+}
+=> Khi thêm sẽ tự động dùng _id là 100001, id này đã tồn tại thì thành update
+2) PUT test/_create/100001
+{
+  "user": "cr7"
+}
+=> Chưa có thì tạo, id có r thì báo lỗi
+3) PUT test/_doc/100004?op_type-create
+{
+  "user": "cr7"
+}
+=> Thành dùng _create ở case 2
+
+Lấy mọi index trong elasticsearch cluster:
+GET _cat/indices
+=> Tương tự khi convert sang rest api: curl -XGET http://localhost:9200/_cat/indices
+
+Search lấy mọi record với trường timestamp giảm dần
+GET test/_search
+{
+  "query": {
+    "match_all": {}
+  },
+  "sort": [
+    {
+      "@timestamp": {
+        "order": "desc"
+      }
+    }
+  ]
+}
+
+Lấy nhiều bản ghi match
+GET _mget
+{
+  "docs": [
+    {
+      "_index": "test",
+      "_id": 100001,
+      "_source": ["user"]
+    }, {
+      "_index": "test",
+      "_id": 100002
+    }
+  ]
+}
+
+VD Thêm 1 kiểu mới vào doc của custom endpoint:
+PUT test/_mapping
+{
+  "properties": {
+    "number": {
+      "type": "integer"
+    },
+    "birth_date": {
+      "type": "date",
+      "format": "dd/MM/yyy"
+    }
+  }
+}
+
+GET / => chính là localhost::9200
+
+--> Tùy biến với Devtool:
+URL: https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-bulk.html
+
+Cú pháp: Lệnh <endpoint> {<body dạng json>}
+endpoint thì tùy biến: đầu tiên là index custom / phần url chức năng elastic cung sẵn
+
+Lệnh thì đủ các thể loại của REST API. VD check tồn tại record hay không:
+HEAD test/_doc/100001 => check bản ghi
+HEAD test => check có chỉ mục test hay không
+
+Các endpoint có lúc dùng trong body, có lúc dùng trong url path, có lúc dùng trong url search. VD xóa bản ghi:
+1) DELETE test/_doc/100001
+2) POST test/_delete_by_query
+{
+  "query": {
+    "match": { "user": "cr7", "_id": "100001" }
+  }
+}
+Có thể xóa multi record của index với DELETE _bulk
+
+--> Tổng hợp các endpoint hay:
+_doc và _search là 2 endpoint hay dùng nhất
+
+GET test/_mapping => lấy _mapping của index custom là thông tin các trường của index đó. Nếu ta k định nghĩa thì các trường có type xđ default
+PUT test/_create/1001 {<body>} => tương tự PUT test/_doc/1001 {<body>}
+GET test/_doc/100001?_source=user,uid => _source trong trường search lọc ra field cần lấy
+GET test/_doc/100001?filter_path=_source => filter_path bảo lấy toàn bộ _source
+GET test/_count => _count lấy số bản ghi của index
+
+_settings => endpoint chỉnh sửa config
+_create => Chưa có thì tạo, có r thì báo lỗi
+_mget => lấy multi record
+
+-> Stack Management / Index Management: Xem mọi bản ghi của từng index
+
+
+
+# Query với _search
+_search dùng GET hay POST đều được
+
+VD Chỉ lấy trường @timestamp:
+GET test/_search
+{
+  "query": {
+    "match_all": {}
+  },
+  "fields": [
+    "@timestamp"
+  ], 
+  "_source": false, // Or [<liệt kê các trường ra>]
+  "sort": [
+    {
+      "@timestamp": {
+        "order": "desc"
+      }
+    }
+  ]
+}
+
+VD search mặc định là OR với các từ juve OR help OR striker trong trường phrase:
+PUT players
+POST players/_search
+{
+  "query": {
+    "match": {
+      "phrase": "juve help striker"
+    }
+  }
+}
+
+VD search với AND:
+POST players/_search
+{
+  "query": {
+    "match": {
+      "phrase": {
+        "query": "juve help striker",
+        "operator": "and"
+      }
+    }
+  }
+}
+
+VD search bằng OR khớp 2 từ, nếu khớp 3 từ thì hệt như AND:
+POST players/_search
+{
+  "query": {
+    "match": {
+      "phrase": {
+        "query": "juve help striker",
+        "minimum_should_match": 2
+      }
+    }
+  }
+}
+
+VD search theo 2 trường name và phrase or 2 từ wood và juve:
+POST players/_search
+{
+  "query": {
+    "multi_match": {
+      "query": "wood juve",
+      "fields": ["name", "phrase"]
+    }
+  }
+}
+
+VD tìm kiếm đủ 1 cụm từ:
+POST players/_search
+{
+  "query": {
+    "match_phrase": {
+      "phrase": "help striker juve"
+    }
+  }
+}
+=> Phải chứa đúng thứ tự như các từ riêng biệt. VD dùng "phrase": "help striker juv" thì phrase chứa "help striker juve" sẽ k khớp
+
+VD dùng slop linh hoạt:
+POST players/_search
+{
+  "query": {
+    "match_phrase": {
+      "phrase": "help juve",
+      "slop": 1
+    }
+  }
+}
+=> slop = 1 chỉ định có max 1 từ nữa được xuất hiện giữa 2 từ help và juve, tăng độ linh hoạt của search
+
+VD search chỉ cần có chứa đúng cụm từ:
+POST players/_search
+{
+  "query": {
+    "match_phrase_prefix": {
+      "phrase": "help juv",
+      "max_expansions": 2
+    }
+  }
+}
+=> max_expansions là max lấy 2 phần tử, default nó là 50 phần tử
+
+

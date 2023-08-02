@@ -1,0 +1,162 @@
+NodeJS
+
+
+
+# Tương tác telegram
+-> Tạo bot tự động nhắn tin vào channel sau 1 khoảng thời gian:
+Telegram bot có thể dùng thay thế kiểu gửi mail cũ.
+Ở đây ta làm bot gửi message vào 1 channel cụ thể, channel giống như 1 group chat mọi người đều nhận được.
+
+npm i telegraf => giúp tương tác với telegram
+npm i node-schedule => package giúp quản lý job, có thể setup chạy hàm gì vào thời điểm nào.
+
+@BotFather => chat với thằng này để tạo bot, lấy API key, có thể edit và làm mọi thứ với bot.
+Tạo 1 channel và thêm bot vào làm admin => ấn vào hình cái bút ở cuối list chat, ấn vào setting của channel
+@JsonDumpBot => chat với thằng này để lấy thông tin phòng chat
+Ta chat vào channel và forward message tơi @JsonDumpBot để lấy thông tin phòng chat, lấy được id channel trong forward_from_chat
+=> Dùng channelid + api key là tạo được 1 con bot có thể sendmessage vào channel đó.
+
+Thông thường người ta làm kiểu từng người đăng ký riêng với bot để nhận thông báo riêng của họ chứ ít khi dùng groupchat như này.
+
+
+
+# Dùng jsonwebtoken
+-> Tự động nhận accesstoken mới khi token cũ hết hạn
+--> Mô hình cũ
+URL: https://www.youtube.com/watch?v=7fKjiBcBj3E&list=PLw0w5s5b9NK5m3558bDRdZoBVoV08ZpxI&index=15
+
+Ngày xưa, họ thường làm sai kiểu lưu expired time phía Frontend để cho Frontend xử lý:
+Người dùng ấn login sẽ nhận về { accessToken, expiredTime } và lưu 2 thông số này vào localStorage.
+Trước mọi request sẽ check expiredTime trong localStorage còn hạn thì mới cho request và phía server sẽ k check accessToken đã hết hạn chưa. Thg dùng axios.interceptors.request.use( trả ra config ) và axios.interceptors.response( trả ra response )
+Trừ request login và signup sẽ k cần check accessToken expiredTime ở frontend
+=> Người dùng có thể chỉnh thời gian trong máy or sửa mẹ localStorage để pass qua frontend.
+
+--> Mô hình phổ biến ngày nay: 
+Expire time nhét vào payload và được check ở server => ref tới "NodeJS / Basic JWT"
+
+Accesstoken có thể lưu ở cookies, localStorage, session (tắt browser là mất) ở phía client.
+
+Khi dùng axios:
+Khi gửi token đi có thể dùng axios.interceptors.request.use() và gán config.headers['X-Token']=<token>
+Khi nhận về dùng axios.interceptors.response() để lấy lỗi trả về là expired thì code luôn việc request lại accessToken cho người dùng
+
+-> Bài toán hủy hàng loạt token
+--> Khi người dùng logout, phía client xóa token ở front và chuyển hướng trang login. Token bị hủy sẽ bị vô hiệu khi qua expiretime, thời gian hết hạn càng ngắn càng an toàn nhưng request sẽ nhiều lên vì người dùng lấy accesstoken nhiều lần hơn.
+
+Cách trên là ok rồi, còn cách khác k ổn là dùng blacklist VD lưu accesstoken vào redis mỗi khi logout. Mọi request phải check thêm là k có trong blacklist, khi hết hạn sẽ tự bị xóa thì redis sẽ nhẹ hơn chứ k bị lưu quá nhiều. Nếu quá nhiều người dùng thì nên lưu key value (user => [blacklist token]) để search cho nhanh và mỗi lần check phải check thêm token hết hạn chưa rồi xóa thủ công đi.
+
+=> Nhiều ứng dụng qtr như ứng dụng ngân hàng yêu cầu accesstoken ngắn và thậm chí k có refresh token để buộc người dùng phải nhập mk mới đi tiếp.
+
+--> Bài toán: ứng dụng cập nhật có tính năng mới, chỉ ai có accesstoken mới mới dùng được, mọi accesstoken cũ cần bị hủy, tức buộc người dùng phải đăng nhập lại.
+C1: Kể từ lúc cập nhật, mọi request của người dùng lên server lần đầu tiên thì đều báo lỗi token k hợp lệ và lưu người dùng đó vào blacklist. Bất cứ ai chưa có trong black list đều báo k hợp lệ và lưu lại. 
+=> K ổn nếu người dùng đăng nhập trên nhiều thiết bị và có nhiều token thì cái này chỉ báo có 1 lần là sai, các thiết bị khác sẽ dùng token cũ k báo lỗi và k dùng được tính năng mới. 
+
+C2: Thay đổi cấu trúc token. 
+1 JWT token được cấu tạo bởi: [(base64UrlEncoded JSON) Header] [(base64UrlEncoded JSON) Payload] [(base64UrlEncoded String) Signature]
+Có thể xem trong: https://jwt.io/
+Ta đổi payload thêm trường version. VD ban đầu là {id, email} thì thêm thành {id, email, version}. Mỗi request ngoài check expiretime, check thêm version phải trùng với version của hệ thống. Version hệ thống có thể lưu trong env or lưu vào mỗi user database (or cache như redis). Khi update thì tăng version lên, accesstoken tạo ra cũng tăng version lên là được
+Ta có thể custom chỉ update với các user xác định. Vd lưu vào user database thì đổi version của user nào sẽ chỉ hủy accessToken của user đó => Cũng có thể thêm tùy ý trường type vào payload để chỉ định áp dụng với user có type là gì
+=> Với cách này k cần lưu lại blacklist của token, thoải mái custom. 
+
+Tối ưu hơn nữa: thay vì báo lỗi có thể trả lại accessToken mới cho người dùng luôn nếu accesstoken đúng như version sai, nhưng làm v phía frontend phải check và update accessToken với mọi request. 
+
+
+
+# Usecase tính toán lượt view
+Với các hệ thống nhỏ thì lượt view có thể tính đơn giản là tăng view mỗi khi request get được gọi kèm ratelimit thì k nói
+
+Với các hệ thống lớn VD video của youtube, k thể mỗi lần get là +1 view vì sẽ quá nh view, k thể mỗi user vào xem nhiều lần thì chỉ tính là 1 vì video nào cũng như nhau.
+Cơ chế họ có thể chọn 1 mốc là 30s (tùy nền tảng or chọn theo % là phải xem được bnh % của video). Sau đó phân chia khoảng 30s đó khắp video và thay đổi liên tục vị trí. Vd 10s đầu ở đoạn 1p->1p10s, 10s sau ở 2p->2p10s, 10s cuối ở 3p50s->4p => user phải xem đúng các đoạn đó mới +1 view, thuật toán thay đổi liên tục sau 1 ktg
+Nếu user cứ xem được 30s xong refresh lại để tăng view thì cũng k cộng lên, họ xử lý băng cách lưu thông tin user đó như kiểu IP chẳng hạn vào trong cache tự hết hạn và bị xóa sau khoảng 5p. Mỗi khi request view, server check ip vẫn có trong database sẽ k cộng view lên. Tức là người dùng refresh liên tục trong 5p sẽ k có tác dụng vì ip vẫn có trong DB.
+
+VD các nghệ sĩ nổi tiếng khi cộng lượt view tăng quá nhanh, chắc chắn DB k thể sử dụng MySQL hay MongoDB mà phải sử dụng redis. Chỉ db cache mới đảm bảo về tốc độ, giảm áp lực vào DB.
+
+Về vấn đề userid, ta có thể tạo 1 userid ảo dù user chưa đăng nhập và lưu vào cookies, mỗi request phải gửi kèm lên để server lưu. Còn về việc dựa vào IP address k ổn, nếu nhiều user chung 1 mạng LAN thì có IP public chung nên nếu coi là 1 thì k chuẩn.
+
+Các logic thuật toán xem 30s thì để cho frontend xử lý nhưng sẽ gặp vấn đề vì mọi request từ phía frontend đều k đáng tin. Nên người dùng luôn có cách để fake request với input và cookies thay đổi. Thậm chí họ có thể dùng 1000 máy độc lập chạy video tăng view. Dùng các phần mềm fake IP đổi liên tục.
+=> Tuy nhiên điều đó chấp nhận được vì k cản được hết tất cả. Họ chỉ cần dùng thuật toán 30s + ratelimit + check cache user. Có thể check và chặn các IP có lưu lượng truy cập bất thường (VD 1 IP truy cập đồng thời tới cả nghìn lần thì khá vô lý cho 1 mạng LAN thì sẽ bị chặn ngay). Dùng cors để cản các request k tới từ đúng trang của họ là được.
+
+Dùng nginx làm reserve proxy có thể lấy được ip của user trong header trường X-Forwarded-For
+
+-> Dùng package ioredis: giúp dùng các hàm giống với redis-cli và trực tiếp có async await
+
+
+
+## Microservices
+Ngày xưa: Đặt hàng ---> Xử lý [100ms có hàng] ---> Mua hàng
+Ngày nay: Đặt hàng --> Xử lý [100ms check giảm giá] [200ms tích điểm] [100ms hội viên] [...] --> Mua hàng
+=> Thao tác đặt hàng có thể xử lý mất tới vài giây thay vì tức thì như trước. Do đó các hệ thống lớn tối ưu thông qua microservices, khiến nó trở thành:
+Đặt hàng --> Xử lý [100ms] --> Mua hàng
+            |  |     |    \ 
+            v  v     v      v
+      [100ms][200ms][100ms] [...]
+
+=> Có nhiều cách để triển khai microservices. VD ActiveMQ; RabbitMQ giúp triển khai mô hình MessageQueue cho microservices; RabbitMQ và redis cũng có thể triển khai mô hình pub sub cho microservices.
+=> Có thể coi database, cache, messsagequeue là 3 loại storage lưu trữ dữ liệu buộc phải có trong các hệ thống lớn. 
+
+
+
+# Triển khai microservices với redis pub sub
+Người dùng đặt hàng sẽ phải xử lý tính giá và gửi mail và trả lại kết quả cho người dùng
+2 chức năng tính giá và gửi mail là 2 services là 2 ứng dụng độc lập
+Server gửi trả về kết quả ngay lập tức còn 2 services kia thực hiện bất đồng bộ đồng thời ở 2 ứng dụng riêng. Điều này giúp tối ưu hóa tốc độ xử lý và chia tách tốt, muốn thêm hay xóa services nào đi dễ dàng.
+
+Có thể dùng rdcli để làm pub sub test trước khi code vì mọi lệnh trong code đều có thể làm bằng cli và ngược lại.
+
+=> Redis pub sub chỉ dùng với hệ thống ít luồng đơn giản ít khi dùng với dự án thực tế. Giả sử ở trên có 1000 user cùng request làm nó bắn 1000 sự kiện 1 lúc sẽ rất mệt. Với các hệ thống lớn có nhiều luồng như v, họ thg dùng RabbitMQ hay các mô hình mạnh hơn cho microservices. VD nhét vào message queue để xử lý dần tránh bị quá tải.
+
+
+
+# API Gateway
+-> Mô hình Direct Client-To-Microservices: 
+Client App[Mobile, web] ---> [Microservice1 chạy container WebAPI, Microservice2 WebAPI, Microservice3 WebAPI]
+=> Gặp nhiều vấn đề: Làm sao client giao tiếp với nhiều microservices, phân quyền như nào, dữ liệu mobile và web khác nhau thì cần tối ưu ntn
+
+-> API Gateway chuyên dùng cho hệ thống phân tán dạng microservices. Điều quan trọng là nó được dùng như 1 endpoint duy nhất mà khách hàng giao tiếp, giúp che giấu sự phức tạp của kiến trúc microservices bên dưới. API Gateway cũng giúp điều hướng yêu cầu, quản lý phiên bản, cân bằng tải, quản lý tốc độ.
+Phân biệt với load balancer dùng để cân bằng tải hay reverse proxy cung các chức năng như cache, chuyển tiếp, bảo mật truy cập. Load balancer và reverse proxy là các thiết bị chuyên dụng cho hệ thống phân tán nói chung.
+
+Mobile ----------------------------------> |             | ---> Microservices WebAPI1
+WebApp ----------------------------------> | API Gateway | ---> Microservices WebAPI2
+Traditional Web HTML <---> Server MVC _______/^            ---> Microservices WebAPI3
+
+=> Các ứng dụng khác nhau chỉ cần connect với 1 endpoint duy nhất và chuyển tiếp request tới từng microservices. Nhưng khi ứng dụng lớn dần, API Gateway ngày càng phình ra không tốt
+
+-> Mô hình multiple API gateway BFF (Backend for frontend)
+Ta tiếp tục chia nhỏ API Gateway theo loại mobile hay web
+
+Mobile ---------------------------> API Gateway Mobile ___> [Microservice1, Microservice2, Microservice3]
+WebApp ---------------------------> API Gateway Web ___________/^
+Traditional Web <---> Server MVC ______/^      
+
+=> Tức tùy loại frontend khác nhau mà dùng gateway khác nhau
+
+-> Dùng API Gateway
+Có package npm express-gateway giúp chạy gateway cho server express nodejs luôn
+
+
+
+## RabbitMQ
+# Vấn đề đồng bộ của cache
+Nếu hệ thống ít người dùng, ta k cần dùng cache, chỉ xét trường hợp nhiều người dùng đồng thời.
+
+Cache redis luôn phải đồng bộ dữ liệu với database gốc. Khi write sẽ update trực tiếp cả cache và database, khi read sẽ đọc trong cache, không có thì đọc trong DB rồi update vào cache. Nhưng các quá trình đó không là transaction nên sai khi nhiều người read/write or write/write đồng thời. 
+Khi cần update data trong cache, ta nên delete thay vì gán 1 giá trị rỗng cho nó vì lệnh xóa nhanh gọn, tiết kiệm bộ nhớ và tốt hơn lệnh set về tính nhất quán. Sau này cache sẽ tự động được update ở lần get đầu tiên của user.
+
+VD1: A write, B read. TH này A write thì hắn del cache chứ k set cache
+A xóa cache. B read cache k có. B read DB có data cũ. B update cache. Lúc này A mới set database thì DB và cache khác dữ liệu nhau
+VD2: A write, B write. Th này cả 2 set cache chứ k del cache.
+A set giá trị cache. B set giá trị cache. B update DB. Lúc này A mới update DB thì bị sai vì B update sau nên giá trị của A là giá trị cũ mà.
+
+=> Để giảm lỗi cho các tình huống như v, quy tắc là ta luôn set database trước rồi mới update cache sau. Nó đảm bảo database gốc được update đúng thứ tự nhưng vẫn chưa tốt, VD case2 bên trên vẫn có thể sai data trong cache.
+
+=> RabbitMQ ra đời cũng giúp database và cache được đồng bộ chuẩn hơn. 
+
+
+
+# RabbitMQ
+
+
+
+# ElasticSearch
+
+

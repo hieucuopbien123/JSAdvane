@@ -1,0 +1,128 @@
+RabbitMQ
+
+
+
+# Basic
+Có nhiều loại MessageQueue như RocketMQ, RabbitMQ, Kafka, ActiveMQ, mỗi loại có thế mạnh riêng. 
+
+-> Mô hình cơ bản:
+Mô hình 1:
+User <--100ms--> System -- MessageQueue --200ms-- Service 1 gửi mail
+                                        --400ms-- Service 2 tích điểm
+                                        --100ms-- Service 3 cộng rank
+Mô hình 2: Tương tự nhưng có thể dùng 3 message queue, mỗi MQ xử lý 1 service riêng kiểu hàng đợi cũng đươc
+
+Mô hình 3: VD ta có 1 server connect MySQL chịu tải max 2k request 1s, trong điều kiện bth nó nhận 50 request 1s nên server chạy vẫn ok. Nhưng sau ta phát mã giảm giá, số lượng request vào thời điểm đó tăng lên 5k request 1s. Như v database server sẽ bị sập mất (giả sử k dùng cache ở TH này). Khi đó ta có thể dùng message queue, config cho nó dùng hàng đợi cho output max 2k request 1s. Như v dù đầu vào nhiều đến đâu thì hàng đợi cũng chỉ cung ra 2k request 1s, các request khác sẽ nằm trong hàng đợi chờ được lấy ra, tăng tính bền vững của hệ thống.
+
+Nhược điểm của MQ là làm hệ thống trở nên phức tạp và thiếu tính nhất quán. Người dùng có thể thấy request đã xử lý thành công nhưng thực chất nó vẫn chưa được xử lý xong, vẫn có xác suất bị miss message.
+RabbitMQ chịu được tầm 10k request, thông lượng yếu hơn so với Kafka. Còn độ trễ hay độ tin cậy thì RabbitMQ tốt hơn, khó miss message hơn. 
+
+-> RabbitMQ có nhiều messaging pattern, ta xét 3 patterns phổ biến:
+1) Message Queue: 
+RabbitMQ là message broker ở giữa producer và consumer. Producer gửi message vào 1 queue cụ thể nào đó và consumer có thể nhận và xử lý message bất đồng bộ. Mỗi message chỉ được nhận bởi 1 consumer và đảm bảo tính có thứ tự khi xử lý message. Có thể có nhiều MessageQueue chứ k chỉ 1
+Producers ---> Message Queues ---> Consumer
+=> Thường dùng cho kiểu workload distribution hay load balancing vì chỉ 1 consumer nhận là được
+
+2) Publish/Subscribe
+Producers --> RabbitMQ (MessageBroker)[Exchange1 ---> Queue11] ---> [Consumer1, Consumer2]
+                                      [          \__> Queue12] __/^
+                                      [Exchange2 ---> Queue21] ---> [Consumer3, Consumer4]
+                                      [          \__> Queue22] __/^
+
+Thực tế producer và consumer connect với MQ thông qua 1 channel connection. Ta có thể config số lượng connection:
+Producer --- Channel --- MessageBroker --- Channel --- Consumer
+
+RabbitMQ như 1 khối, bên trong có các exchanges gắn với các queues khác nhau theo các routing rules ta tùy ý custom. 
+Producers publish gói tin vào 1 exchange nào đó chứ k gửi trực tiếp vào queue. Exchange sẽ boardcast message tới queue theo routing rules. 
+Consumers subscribe vào exchange và nhận message từ queue mà nó cần. 
+=> Pattern này thường dùng khi message gửi tới nhiều consumer chứ k chỉ 1.
+
+Có 4 loại exchange: topic, fanout, direct, header. Header là loại ít dùng nhất, còn lại dùng nhiều.
+
+3) Kết hợp 2 mô hình đầu
+Cũng có nhiều kiểu kết hợp, ta xét thử 1 kiểu:
+VD message được published tới exchange và routed tới queue tương ứng dựa trên routing keys và message headers. Consumer đăng ký bind vào exchange với routing key nào thì chỉ nhận được message match với routing key đó. 
+Như kiểu nó gắn thêm thông tin vào để xác định gửi tới đâu. Với mô hình kiểu kết hợp, vừa có thể gửi chỉ 1 consumer, vừa có thể boardcast tùy mục đích.
+
+=> Tùy biến được
+
+-> Install RabbitMQ
+1) Tạo RabbitMQ bằng cloud free sẽ có sẵn cho hosting
+URL: https://customer.cloudamqp.com/
+Chọn tùy ý các thứ. Datacenter chọn Amazon ở Singapore. 
+Tạo sẽ vào được trang dashboard quản lý(Ấn RabbitMQ Management), nó cung port, uri cần để connect.
+
+Bản free dùng max 20 connection đồng thời nên cần implement chuẩn, đóng connection sau khi sử dụng.
+
+2) Install bằng docker có thể tùy ý custom localhost
+URL: https://www.rabbitmq.com/download.html
+
+Nếu chưa có rabbitmq image: docker pull rabbitmq:3.12-management
+Chạy rabbitMQ image: docker run -it --rm --name rabbitmq -p 5672:5672 -p 15672:15672 rabbitmq:3.12-management
+=> Nó ánh xạ cổng 5672 để connect, cổng 15672 để quản lý. Ta vào localhost:15672 và nhập tk mk đều là "guest" để truy cập dashboard.
+
+
+
+# UseQueue
+Queue model là mô hình queue chỉ có 1 consumer nhận message và được phân bố công việc đều giữa các consumer như 1 load balancer. VD message 1 là consumer 1 xử lý thì message 2 sẽ gửi cho 1 consumer khác mà lâu nhất chưa xử lý message nào.
+
+-> npm i amqplib => connect với rabbitMQ
+
+-> Xem thông số trên MQ Manager
+Khi ta tạo ra 1 connection và tạo ra 1 Queue, ta đóng connection thì queue đó vẫn lưu trên server RabbitMQ, chỉ connection bị đóng thôi. Từ trang manager, ta có thể xóa queue or thêm queue với tên thoải mái
+
+Khi ta gửi message vào queue, message sẽ nằm trong queue và các consumer có thể subscribe để bắt message. Xem trên manager sẽ thấy total là tổng số messsage trong queue, ready là số message sẵn sàng gửi tới consumer, unacked là số message đang được 1 consumer xử lý nhưng chưa nhận được ack hay vẫn chưa bị xóa khỏi queue.
+
+-> Vấn đề:
+Consumer X đang xử lý message 1 thì queue lại gửi tiếp message 2 cho consumer X. X sẽ bị quá tải nên cần có cơ chế đảm bảo queue chỉ gửi message cho consumer khi consumer đó đã xử lý xong hết các message nhận trước đó.
+
+Consumer X đang xử lý message 1 thì bị crash hoặc tắc ở 1 chỗ, nó là consumer duy nhất nhận nv xử lý với ack=true. Queue lúc này sẽ kbh xóa message 1 đi nên còn có cơ chế ttl cho message tự xóa tránh phí bộ nhớ hoặc lưu lại để xử lý về sau nếu là message quan trọng.
+
+--> Dùng durable, persistent, noAck, expiration, prefetch
+Durable false hay true thì khi server MQ crash or lỡ tay restart server thì dữ liệu mất vĩnh viễn hay vẫn bảo toàn, phải dùng kèm persistent. Cả client và server đều phải set durable cùng giá trị
+Dùng persistent true kết hợp với durable để đảm bảo dữ liệu k bị mất. Nó lưu message vào cache và ổ đĩa để server MQ crash vẫn k mất
+
+noAck: Giả sử consumer c1 nhận và xử lý xong với noAck là false, MQ sẽ coi là mess này vẫn đang được xử lý. Chỉ khi queue nhận được noAck là true thì mới hiểu là xử lý xong và xóa. Trong TH đó, nếu chỉ có c1 bắt với noAck = false thì có thể mess sẽ kbh bị xóa khỏi queue, nếu c1 crash, queue sẽ truyền nó tiếp cho 1 consumer khác xử lý và tiếp tục chờ noAck true
+
+Dùng channel.prefetch(1); để đảm bảo channel chỉ nhận 1 tin nhắn ở 1 thời điểm
+
+--> Quy tắc: 
+- Queue ưu tiên cho consumer xử lý message là unacked trước ready 
+- Mỗi message chỉ được xử lý bởi 1 consumer ở 1 thời điểm
+
+VD: 1 consumer bắt message từ queue có 1 unacked, 1 ready thì nó nhận về unacked trước (unacked đó đang k được xử lý bởi consumer nào khác)
+VD: 1 queue có 1 ready và 1 unacked đang được xử lý bởi 1 consumer. Consumer khác vào thì sẽ nhận message là ready vì message unacked đang được xử lý bởi 1 consumer r.
+
+=> Tức thực tế nhiều consumer có thể hoạt động cùng lúc xử lý các message khác nhau trong 1 queue. 
+VD tạo ra mỗi service 1 queue và nhiều consumers xử lý 1 services để giúp xư lý services đó cho nhiều user hơn cùng 1 lúc.
+Service1 --- Nhiều consumer1 --- Queue1 --- | Producers | --- Server --- Users
+Service2 --- Nhiều consumer2 --- Queue2 --- |           |       
+
+
+
+# Use pubsub
+Producer --- Exchange ___ Queue1 
+                      \__ Queue2 
+
+Exchange xử lý phân bố message vào queue đang lắng nghe đúng sự kiện or loại bỏ message nếu k cần thiết.
+
+Có 4 loại exchange: 
+- Direct exchange: định tuyến dựa vào routing key đặt trong message. Exchange gửi message tới queue liên kết với exchange đó mà có routing key khớp.
+- Topic exchange: định tuyến tin nhắn dựa trên routing key kiểu wildcard. Exchange sẽ so khớp routing key của tin nhắn với routing pattern của queue
+- Headers exchange: exchange so khớp thuộc tính trong trường header của tin nhắn với header trong pattern của queue
+- Fanout exchange: loại đơn giản nhất vì routing message tới mọi queue liên kết với nó mà k qt routing key gì cả.
+
+-> Dùng fanout exchange:
+Fanout như kiểu cánh quạt thổi ra ngoài ấy, mọi queue miễn là subscribe và đều có thể nhận
+
+Pb:
+Dùng queue: tạo 1 queue name X -> producer gửi tin vào queue X -> consumer gắn vào queue X sẽ nhận được tin (thông qua channel)
+Dùng pubsub: tạo 1 exchange name X -> producer cho exchange publish message -> consumer tạo queue tạm thời bind vào exchange X -> queue nhận được tin thì consumer gắn với queue cũng nhận được tin
+=> Các kiểu exchange khác cũng tương tự, chỉ có routing method khác
+
+-> Dùng topic exchange
+Queue bind với đúng exchange và có routing key thỏa mãn thì nhận được message
+
+Pattern topic dùng # và *
+
+

@@ -211,7 +211,7 @@ Thuộc nhóm Structural. Dùng khi ta cần quản lý việc truy cập tới 
 
 - Tạo class ProxyHandler chứa biến RealHandler. Nó check các thứ trước khi gọi hàm của RealHandler
 
-Ưu điểm: làm điểm trung gian có vai trò che giấu enpoint, chống attack, giới hạn quyền truy cập hoặc hỗ trợ việc gọi từ xa. Khi chỉnh sửa logic chỉ cần sửa trong class Proxy
+Ưu điểm: làm điểm trung gian có vai trò che giấu enpoint, chống attack, giới hạn quyền truy cập hoặc hỗ trợ việc gọi từ xa. Khi chỉnh sửa logic chỉ cần sửa trong class Proxy. Tối ưu hóa, hạn chế việc khởi tạo lại object
 
 
 
@@ -257,6 +257,20 @@ Concrete implementation là thứ người dùng gọi thực sự để lấy d
 VD ở trên muốn tương tác table nào dùng loại DB nào cũng được.
 
 Trong dự án C# có dùng pattern này. Đó là class Repository xử lý từng database chính là bridge class để client tương tác đó.
+
+
+
+# Decorator Pattern
+Decorator Pattern thuộc nhóm structural. Dùng khi cần mở rộng tính năng của 1 đối tượng mà k đổi đối tượng gốc đã có
+
+- Tạo hàng loạt class Decorator kế thừa chồng chéo và kế thừa class gốc. Implement các thay đổi 1 cách độc lập nhau.
+- Để dùng, tạo instance decorator từ các instance khác liên tiếp
+
+Thêm decorator mới hay sửa decorator đều k ảnh hưởng đến các class khác. 
+
+Các class decorator chấp nhận việc chồng chéo lên nhau sao cho mỗi class chỉ thực hiện 1 phần chức năng bổ sung và chuyển tiếp tới decorator tiếp theo trong chuỗi. 
+Phải implement sự thay đổi của từng decorator 1 cách độc lập, sao cho kết hợp được các decorator với nhau k bị sai logic. Vd decorator x vẽ màu đỏ, decorator y vẽ màu xanh thì cái nào vẽ sau sẽ lấy cái đó. Vd giá decorator x là + 2, giá decorator y là * 2 thì phải chú ý lúc dùng cái nào trước, cái nào sau.
+Nếu ta không làm v thì nó chả khác nào kế thừa bth. VD mở rộng từ class hinhvuong, thay vì thêm thuộc tính sẽ phải sửa class cũ or tạo các class quá chi tiết như hinhvuongNhat, hinhvuongTo, ta nên thêm các class Decorator bọc các tính năng này vào hinhvuong gốc. Như v có thể kết hợp 1 hình vuông vừa nhạt, vừa to được, tốt hơn kiểu kế thừa bth
 
 
 

@@ -41,5 +41,5 @@ const image = new ProxyImage("test.jpg");
 // The first time we call display(), the RealImage object is created and loaded from disk
 image.display();
 
-// The second time we call display(), the RealImage object is not created again, it's just displayed
+// The second time we call display(), the RealImage object is not created again, it's just displayed vì đã được create và lưu lại ở proxy
 image.display();

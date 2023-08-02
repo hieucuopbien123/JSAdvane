@@ -160,7 +160,7 @@ const callback = () => {
 
 // private và class
 // K cần khởi tạo thuộc tính trong hàm tạo mà viết ngay ngoài class
-// Thêm # để có biến private
+// Thêm # để có biến private. Còn protected thì thêm prefix _
 // Dùng [] để lấy giá trị là tên biến
 const a = 'anony';
 const b = 'stick';
@@ -206,3 +206,35 @@ displayError(code, 'Invalid variable name');
 // const withThree = array.with(2, 3);
 // console.log(array); // [ 1, 2, 2, 4 ]
 // console.log(withThree); // [ 1, 2, 3, 4 ]
+
+
+// # Class trong JS
+// ES5: từ khóa class chưa tồn tại khiến cho JS k dùng được cho OOP chuẩn
+function City(name, x, y) {
+  this.name = name;
+  this.setLocation(x, y);
+}
+City.prototype.setLocation = function(x, y) {
+  this.x = x;
+  this.y = y;
+};
+City.prototype.getLocation = function() {
+  return {
+    x: this.x,
+    y: this.y
+  };
+};
+const _city = new City('Hồ Chí Minh', 100, 200);
+console.log(_city.getLocation());
+// ES6: từ khóa class trở thành chuẩn, kbh dùng function là class như trên nữa
+
+// Trong JS, biến có các tính chất như C++. Nhưng ta thường muốn có tính chất immutable, tức đổi array trả ra 1 array mới mà k ảnh hưởng tới array cũ chẳng hạn. Có nhiều cách đạt được điều này:
+// Ngày xưa thì thủ công việc copy array rồi thao tác với bản đã copy k ảnh hưởng bản gốc. Nhưng performance thấp, VD ta đã duyệt 1 lần để copy, sau đó thao tác có thể duyệt thêm vài lần nữa sẽ chậm
+const people = [1,2,3];
+const copiedPeople = [...people];
+
+// JS cung ra các hàm giúp giữ tính immutable trực tiếp
+const people2 = people.with(2, 4).toSorted().toReversed().toSpliced(0, 1, 10);
+console.log(people2);
+
+
