@@ -30,6 +30,10 @@ Kiểu dữ liệu tham chiếu là kiểu có kích thước thay đổi nên k
 
 
 
+# MongoDB Pattern
+
+
+
 # LRU cache
 Trong JS có WeakMap và WeakSet và WeakRef giúp giải phóng bộ nhớ reference tót hơn khi không sử dụng.
 Nhưng đối với bộ nhớ đệm từ xa thì k nên vì dữ liệu từ xa có thể bị xóa khỏi đệm 1 cách khó lường mà bên gọi không biết. Khi đó tốt nhất là sử dụng LRU cache
@@ -64,4 +68,19 @@ Khi dùng localStorage thì phải chống XSS attack ở mọi nơi. Còn khi d
 -> NodeJS có cli:
 node -> http.STATUS_CODES
         Date.now()
+
+-> Kp lúc nào ta cũng dùng hết các PP bảo mật trong 1 dự án.
+Token JWT
+Rate limit: Hạn chế 1 token chỉ được request tới server n lần/x phút
+Dùng đủ cors headers
+
+Timestamp mechanism: cơ chế chống replicate attack và DDoS (nhưng không mạnh). VD ta cấm 1 request được lặp lại trong quá 1p.
+Nonce: Cơ chế chống replicate attack. Server lưu thêm nonce và nếu 1 nonce từng được sử dụng sẽ lỗi luôn.
+=> ref tới "# Bảo mật server nodejs"
+
+Signature Generation: VD MITM bắt request chuyển tiền và sửa payload người nhận thành hacker. Giải pháp này là ký cái payload bằng khóa của người dùng thì nếu hacker đổi payload sẽ k khớp với sig nữa, lại phải có cơ chế riêng bảo mật khóa để ký (hoặc lưu local máy người dùng mỗi khi login). 
+Các ứng dụng thường dùng giải pháp an toàn như gửi qua mail hay VD trong app ngân hàng nó thường gửi thẳng OTP về điện thoại, google authen
+
+BlackList: Cho người dùng hoặc IP nào spam vào blacklist cấm luôn, Vd khi 1 người dùng gửi quá nhiều request trong 10s liên tiếp. Có thể lưu vào redis chẳng hạn.
+WhiteList: cấm mọi thứ trừ các IP và user trong whitelist
 

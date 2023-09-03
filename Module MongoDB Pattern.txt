@@ -1,0 +1,16 @@
+MongoDB Pattern
+
+
+
+# Basic
+Còn có: polymorphic pattern, attribute pattern, bucket pattern, outlier pattern, computed pattern, subset pattern, extended reference pattern, approximation pattern, tree pattern, preallocation pattern, document versioning, schema versioning pattern. 
+
+Biết dùng pattern nào, chia schema như nào cần phân tích dữ liệu: đọc hay ghi nhiều hơn; dữ liệu có khả năng mở rộng như nào trong tương lai; dữ liệu cần ưu tiên kiểu đọc đồng thời, ghi phân tán hay như nào, quy mô distributed hay nhỏ thôi.
+
+-> 1 model trong mongodb có thể embbded hoặc reference tới 1 model khác. Nếu embbeded thì viết code trực tiếp vào và truy vấn 1 bảng thôi còn reference sẽ ref tới nhiều bảng khác. Embbded có thể nhanh hơn nhưng khiến model code rối
+
+one to many: cha ref tới 10 con chẳng hạn
+one to huge: cha ref tới 1 triệu con quá lớn nên họ dùng con ref tới cha thôi. VD trong hệ thống log, 1 server có 1 triệu log là chuyện bth. Do quá nhiều nên khi lấy log của 1 server, ta dùng các cơ chế khác chứ k join bảng như bth 
+
+
+

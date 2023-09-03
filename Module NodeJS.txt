@@ -82,6 +82,66 @@ Dùng nginx làm reserve proxy có thể lấy được ip của user trong head
 
 
 
+# Bảo mật server nodejs
+-> E2E
+HTTP là truyền tin bị MITM attack
+HTTPs ra đời đã k còn MITM attack trên mạng nữa vì thông tin trên đường truyền bị mã hóa khi từng người dùng thiết lập SSL connection với server. Nhưng thông tin vẫn bị giải mã khi server nhận được rồi lại truyền đi tiếp. 
+
+E2E ra đời nhờ Diffle-Huffman giúp giải quyết vấn đề:
+UserA nhắn message --- mã hóa rồi gửi --- Server nhận r gửi UserB luôn --- UserB nhận rồi giải mã. 
+=> Hacker tấn công server cũng k biết được message là gì, hắn buộc phải có được máy của UserB mới giải mã được.
+
+E2E đảm bảo khi 2 người giao tiếp với nhau, tin nhắn chỉ được biết bởi 2 người đó, kể cả server cũng k biết. 
+VD:
+CR7 có key secret là 7
+M10 có key secret là 10
+Server lưu 1 key secret nữa là 20
+
+CR7 và M10 muốn nhắn tin với nhau thì cùng gửi private key tới server. Server k lưu lại private key này mà chỉ tính lưu lại public key của từng người = private key của từng người + secret key của server 
+CR7 publickey = 27
+M10 publickey = 30
+
+2 người gọi tới server để lấy publickey của nhau
+1 sharekey chung = private key của mình + public key của người kia => dùng mã hóa mọi tin giữa 2 người
+
+=> Việc 2 người gửi private key tới server cần được bảo mật chặt chẽ. Thực tế cũng như access token vậy, gửi qua lại đâu có sợ lộ đâu. Nếu muốn bảo mật thực sự mạnh, có thể tạo cặp public key và private key cho server để client lấy public key của server để mã hóa là xong. 
+=> Server cũng phải bảo mật key secret của nó, tức vẫn phải bảo mật server. Vì key secret của server bị lộ thì hacker có thể truy ngược private key của user từ public key của user.
+=> Để an toàn hơn, server cần đổi secret key định kỳ 6 tháng chẳng hạn, nhưng nếu lưu lịch sử chat thì key đổi sẽ k decode được tin nhắn cũ nữa, nên phải lưu message kèm publickey của 2 người là lại ok.
+
+-> Timestamp và nonce:
+--> Trước tiên họ dùng signature để bảo mật khỏi MITM.
+Xét 1 user gửi request bth với access token, hacker có thể bắt ở giữa rồi thay đổi params rồi gửi lại request đó mà vẫn hợp lệ vì server bth chỉ check mỗi access token.
+
+Các ứng dụng bảo mật cao phải khắc phục vấn đề này:
+Phía user sẽ có 1 key secret k được để lộ. Key này lấy lúc đăng nhập hoặc lưu tại local luôn khi khởi tạo lần đầu tiên(chú ý nó khác access token vì nó buộc không được gửi kèm ở mỗi request). Server cũng lưu secret đó vào DB.
+
+Khi gửi request, user dùng secret kia để mã hóa (sort(params)) thành 1 signature và gửi kèm signature đó luôn -> server nhận được lại lấy secret của user trong DB ra, mã hóa lần nữa và ss với signature. Nếu bằng nhau thì ok, khác thì tức data đã bị thay đổi bởi người trung gian nào đó.
+Đơn giản thì có thể dùng signature = md5(params, key) cũng được vì key ko lộ thì hacker k thể giả mạo signature được
+
+=> Tức là hacker ở trung gian k thể replicate lại request mà thay đổi params được nữa, dù có biết mọi tham số và accesstoken. Nhưng hắn vẫn có thể replicate lại request mà vẫn giữ y nguyên params. Để fix có 2 cách:
+
+--> Request thêm trường timestamp. VD:
+signature = md5(uid=1001&stime=19h00 + key)
+Sau đó server check:
+if(now - stime > 60s) { return false; }
+=> Khi đó hacker replicate lại request sau 1p sẽ thành lỗi luôn
+
+Vấn đề là server ở VN, request từ Mỹ thì múi giờ khác nhau => Giải pháp là tạo thêm 1 API nữa để lấy stime của server rồi gửi kèm lại là xong.
+
+--> Nhược điểm là trong phạm vi 1p đó, hacker có thể vẫn kịp replicate request. Giải pháp an toàn hơn là dùng nonce
+nonce có thể dùng random nhưng cần khoảng rộng tránh lặp, có thể dùng uuid sinh riêng cho an toàn. Có thể dùng sessionid nếu nó thay đổi ở mỗi request. 
+Server check bằng redis nếu nonce đã tồn tại thì return false luôn. Nếu không thì lưu lại vào redis
+
+Để tránh redis phải lưu nonce quá tải thì dùng kèm cả 2 cách là tốt nhất. Vd:
+signature = md5(uid=1001&stime=19h00&nonce=sessionId-123456 + key)
+Phía server:
+- Vẫn check timestamp chưa quá 1p
+- if(redis.hasKey('sessionid-123456')) { return false; }
+else { redis lưu lại nonce vói expire time là 1p }
+=> Nhờ v sau 1p nonce bị xóa thì redis sẽ k tốn
+
+
+
 ## Microservices
 Ngày xưa: Đặt hàng ---> Xử lý [100ms có hàng] ---> Mua hàng
 Ngày nay: Đặt hàng --> Xử lý [100ms check giảm giá] [200ms tích điểm] [100ms hội viên] [...] --> Mua hàng
