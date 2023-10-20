@@ -6,11 +6,214 @@ MongoDB Pattern
 Còn có: polymorphic pattern, attribute pattern, bucket pattern, outlier pattern, computed pattern, subset pattern, extended reference pattern, approximation pattern, tree pattern, preallocation pattern, document versioning, schema versioning pattern. 
 
 Biết dùng pattern nào, chia schema như nào cần phân tích dữ liệu: đọc hay ghi nhiều hơn; dữ liệu có khả năng mở rộng như nào trong tương lai; dữ liệu cần ưu tiên kiểu đọc đồng thời, ghi phân tán hay như nào, quy mô distributed hay nhỏ thôi.
+Nếu dùng được Elastic Search thì càng tốt nhưng mongodb hoàn toàn đủ sức chơi các ứng dụng có data lớn và yêu cầu search nhanh.
 
 -> 1 model trong mongodb có thể embbded hoặc reference tới 1 model khác. Nếu embbeded thì viết code trực tiếp vào và truy vấn 1 bảng thôi còn reference sẽ ref tới nhiều bảng khác. Embbded có thể nhanh hơn nhưng khiến model code rối
 
 one to many: cha ref tới 10 con chẳng hạn
 one to huge: cha ref tới 1 triệu con quá lớn nên họ dùng con ref tới cha thôi. VD trong hệ thống log, 1 server có 1 triệu log là chuyện bth. Do quá nhiều nên khi lấy log của 1 server, ta dùng các cơ chế khác chứ k join bảng như bth 
 
+
+
+# Cách đánh index
+Khi database càng nhiều dữ liệu thì index cũng dài ra. Họ sẽ chia thành các table con, collection con như quyển sách chia thành tập 1, tập 2 vậy.
+
+-> VD: thiết kế module comment cho ứng dụng
+=> Dùng mongodb phù hợp với dữ liệu linh hoạt, thay đổi nhiều, dễ dàng mở rộng và truy vấn phức tạp sẽ phù hợp cho module comment hơn mysql. VÌ comment không yêu cầu transaction ACID nên k cần dùng tới mysql.
+
+--> Mongodb dùng BTree, còn MySQL dùng đa dạng nhiều kiểu index như Full-text indexes, Hash, B-Tree, Spatial indexes tùy vào ta chọn lúc tạo index.
+
+Nhắc lại BTree lưu node cha có nhiều cục trỏ tới node con, node con lại trỏ tới node cháu được chia theo khoảng. 
+Vd node 50 trỏ tới các node con >50 và <60, node 60 trỏ tới node con >60 và <70 => giống binary tree nhưng chia nhiều khoảng còn binary tree chỉ có 2 khoảng > và < node hiện tại
+=> Thực tế nó làm như sau:
+Khóa - Contro 60 - Khóa - Contro 70 - Khóa - Contro 80 - khóa
+Tức số khóa bằng số contro + 1. Khóa sẽ trỏ tới node con, còn Contro lưu data. VD khóa giữa Contro70 và Contro80 sẽ trỏ tới node con >70 và <80
+
+--> Thao tác thêm với mongosh:
+db.products.insert({productName: "Tips JS", categories: ["TShirt", "phone"], stock: {size: "L", color: "green", quantity: 100}});
+db.products.find(); 
+
+db.products.createIndex({ productName: 1 }) => đánh index cho trường productName
+db.products.createIndex({ "stock.quantity": 1 }) => đánh index cho trường stock.quantity
+db.products.getIndexes();
+db.products.createIndex({ "stock.quantity": 1, categories: 1 }); => compound index
+=> Lưu ý trong mongodb k cho đánh chỉ mục 1 lúc 2 trường cùng là array
+
+var exp = db.products.explain(); => mongosh hỗ trợ code JS
+exp.find({ productName: "Tips JS" }); => tìm trong db nhưng giải thích cả quy trình tìm, như có dùng index hay không 
+- Nếu k có index thì stage hiển thị COLLSCAN, có index sẽ hiển thị IXSCAN
+- isMultikey là true nếu ta đánh chỉ mục trên 1 trường mà giá trị của trường đó là 1 mảng. VD trường categories của products trên
+
+=> Quy tắc dùng index giống y hệt SQL. Prefix rule là phải dùng các trường được đánh index theo thứ tự từ trái qua, đúng như cấu trúc của B-Tree
+VD: db.test.createIndex({ a: 1, b: 1, c: 1 })
+Truy vấn dùng index là: db.test.find({c: "", a: ""}); db.test.find({b: "", a: ""});
+
+db.collectionName.stats({ indexDetails: true }); 
+db.collectionName.stats({ indexDetails: {name: "indexName"} }); 
+=> Hiện thị thống kê chi tiết hơn như index nào chiếm dung lượng bao nhiêu vì nếu đánh quá nhiều index sẽ ảnh hưởng tới tốc độ ghi và giảm bộ nhớ.
+
+
+
+# Polymorphic pattern
+Pattern giúp thiết kế schema tối ưu với đa hình.
+Pattern rất đơn giản là nên lưu các kiểu dữ liệu khác nhau vào chung 1 collection nếu có thể gom được các thuộc tính chung của chúng. 
+VD: 1 db lưu 100 loại sản phẩm khác nhau như tai nghe, quần áo, thú cưng vì có cùng các thuộc tính như tên, giá, quantity, ảnh minh họa. Chứ k nên chia ra kiểu ElectronicCollection, PetCollection, ClothesCollection quản lý rất khó khi mở rộng
+
+1 collection trong mongodb cho có thể lưu tới 32TB document. 1 document có max kích thước là 16MB. 1 document có thể nested object tới 100 lần. Hay nói cách khác là có thể lưu thoải mái mà k cần lo về việc phải chia nhỏ ra hay tràn bộ nhớ. 
+MongoDb khuyến nghị sử dụng máy chủ ít nhất 64GB RAM phần cứng cho dữ liệu lớn.
+
+
+
+# Attribute pattern
+Dùng polymorphic pattern tạo 1 collection cho nhiều kiểu data khác nhau. Nhưng mỗi data vẫn có các thuộc tính riêng. 
+
+VD Đồ điện tử có tên hãng, màu sắc:
+attributes: {
+  brand: "apple",
+  color: "silver"
+}
+Quần áo có kích thước, chất liệu:
+attributes: {
+  size: "L",
+  material: "cotton"
+}
+
+Kiểu gì cũng phải dùng index vì người dùng chắc chắn muốn search sản phẩm theo thuộc tính riêng với tốc độ cao nhưng đánh index từng trường sẽ chết bộ nhớ. 
+Attribute pattern giải quyết bằng cách biến mọi attribute thành 1 mảng có cấu trúc chung:
+VD đồ điện tử dùng
+attributes: [
+  { k: "brand", v: "apple" },
+  { k: "color", v: "silver" }
+]
+Còn quần áo dùng
+attributes: [
+  { k: "size", v: "L" },
+  { k: "material", v: "cotton" }
+]
+=> Thì ta chỉ cần đánh 1 index {k: 1, v: 1} là được
+
+Nếu có trường đặc biệt cần 3 giá trị như { k: "height", v: "97", u: "cm" } thì đánh index thành {k: 1, v: 1, u: 1} là được
+
+
+
+# Bucket pattern
+Pattern giúp tạo schema tổng hợp dữ liệu, tiết kiệm bộ nhớ. Thường dùng trong phân tích lưu dữ liệu thống kê.
+
+VD dùng mongodb ghi log để thống kê request theo từng phút trong hệ thống gồm nhiều server phức tạp:
+{
+  _id: ObjectId("0000001");
+  data_received: "2022-03-30 00:01:000",
+  server_id: "111",
+  infor: {
+    ip: "ip của server",
+    cpu: "xx",
+    ram: "xx"
+  },
+  request_calls: 12000,
+  failed_calls: 1200
+}
+=> Tức là mỗi phút sẽ sinh ra 1 documents log như v cho 1 server cần quản lý. 1 ngày có tới 1400 documents rất tốn. Fix với bucket pattern
+
+-> Tối ưu với bucket patter:
+{
+  data_received: "2022-03-30 01:00:000",
+  server_id: "111",
+  infor: {
+    ip: "ip của server",
+    cpu: "xx",
+    ram: "xx"
+  },
+  request_calls: {
+    minutes: [
+      12000, 10000, 200, 90, 1, 2, 3, 4, 5, 90,
+      12000, 10000, 200, 90, 1, 2, 3, 4, 5, 90,
+      12000, 10000, 200, 90, 1, 2, 3, 4, 5, 90,
+      12000, 10000, 200, 90, 1, 2, 3, 4, 5, 90,
+      12000, 10000, 200, 90, 1, 2, 3, 4, 5, 90,
+      12000, 10000, 200, 90, 1, 2, 3, 4, 5, 90,
+    ],
+    sum: 190071
+  },
+  failed_calls: {
+    minutes: [
+      1200, 10000, 200, 90, 1, 2, 3, 4, 5, 90,
+      12000, 10000, 200, 90, 1, 2, 3, 4, 5, 90,
+      12000, 10000, 200, 90, 1, 2, 3, 4, 5, 90,
+      12000, 10000, 200, 90, 1, 2, 3, 4, 5, 90,
+      12000, 10000, 200, 90, 1, 2, 3, 4, 5, 90,
+      12000, 10000, 200, 90, 1, 2, 3, 4, 5, 90,
+    ],
+    sum: 78977
+  }
+}
+=> Tức thay vì lưu 1 phút sinh 1 document mới thì 1h ta mới tạo 1 document mới, còn trong 1h đó chỉ cần update vào document cũ. Ta làm v bằng cách lưu gom lại thành 1 mảng data liên tiếp.
+
+-> Ta có thể tối ưu hơn nữa rằng 1 ngày mới sinh ra 1 document mới.
+{
+  data_received: "2022-03-30",
+  server_id: "111",
+  infor: {
+    ip: "ip của server",
+    cpu: "xx",
+    ram: "xx"
+  },
+  request_calls: {
+    mesurements: {
+      "1": [10000, 12, 123, ... ], // Lưu 60 phần tử là từng phút trong giờ đó
+      "2": [10000, 12, 123, ... ],
+      ...
+      "24": [10000, 12, 123, ... ],
+    },
+    sum: 909099
+  },
+  failed_calls: {
+    mesurements: {
+      "1": [10000, 12, 123, ... ],
+      "2": [10000, 12, 123, ... ],
+      ...
+      "24": [10000, 12, 123, ... ],
+    },
+    sum: 8980980
+  }
+}
+
+
+
+# Subset pattern
+Nhét tất cả data liên quan vào 1 schema giúp thao tác dễ dàng hơn nhưng nếu data lớn k ổn.
+
+Vd thiết kế review cho 1 products hay comment cho 1 bài post như trên facebook:
+{
+  ... data về product ...
+  reviews: [
+    {
+      author: "user1",
+      text: "This is content of review",
+      rating: 5
+    },
+    ... 1000 reviews khác ...
+  ]
+}
+=> Làm như v thì mỗi lần query sản phẩm sẽ lấy hết reviews về và hoang phí.
+
+Subset pattern đưa ra giải pháp là chỉ lưu data cần dùng ngay ở trong main collection. Vd:
+{
+  ... data về product ...
+  topFiveReviews: [
+    ... Chỉ có 5 review tốt nhất hiện ra ...
+  ]
+}
+=> Thì khi người dùng query sản phẩm chỉ lấy về 5 reviews đáng quan tâm nhất. Sau đó nếu ấn nút xem thêm mới show toàn bộ review với phân trang lấy từ hẳn 1 collection Review khác.
+=> Điều này là cần thiết vì review là loại data có thể mở rộng ra vô hạn. Theo thời gian nó sẽ lớn dần lên mà k bị giảm đi, trong khi 1 document max 16MB nên việc chia ra Schema riêng cho Review là cần thiết. 
+
+Có nhiều giải pháp có thể nghĩ ra như cho người dùng vote vào bình luận để bình luận đó được chọn lưu vào top five chẳng hạn. Tương tự vote sản phẩm nào lên top trend.
+Có thể mở rộng ra k chỉ lưu review mà còn dùng với mọi loại data khác, chỉ cái nào được truy cập thường xuyên mới lưu vào main collection.
+
+-> Có thể tối ưu hơn nữa bằng cách tạo 1 crawl job cứ mỗi 3 tháng sẽ tự động đẩy 80% dữ liệu review vào collection "Lịch sử cũ" trong trường hợp số lượng review bị nhiều quá. Hoặc 1 cách gì khác tương tự.
+Làm như v sẽ càng gọn hơn nữa vì khi lấy bảng review sẽ ít data query hơn mà vẫn đảm bảo yêu cầu. 
+
+-> Trong mongodb mặc định có bộ đệm WiredTiger
+Bộ đệm này tự động lưu các data nằm trong Working Set (cũng chỉ là các data được truy vấn nhiều) để tối ưu. Vd nó thường lưu indexed data.
+=> Ta k thể tương tác với bộ đệm này nhưng có thể custom qua cấu hình để đáp ứng nhu cầu về hiệu suất, như custom kích thước, cách lưu dữ liệu, quản lý bộ đệm qua các công cụ khác
 
 

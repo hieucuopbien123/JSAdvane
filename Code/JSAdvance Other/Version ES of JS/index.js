@@ -237,4 +237,24 @@ const copiedPeople = [...people];
 const people2 = people.with(2, 4).toSorted().toReversed().toSpliced(0, 1, 10);
 console.log(people2);
 
+// Node phiên bản càng cao càng hỗ trợ js version lớn hơn và tương thích browser mới. Do đó dùng js và nodejs bản thấp sẽ đảm bảo tương thích hết.
+// JS ra từ khóa using để tự clean up giá trị khi ra khỏi scope giống C# nhưng chỉ có ở phiên bản mới nhất
 
+// Thay cho array.includes
+console.log(1 in people);
+
+// JS lúc trước k có phương thức lấy phần tử cuối cùng của array, bh dùng at()
+const arr = [1,2,3];
+console.log(arr.at(-1), arr.at(-2));
+
+// Vấn đề copy object và array
+// ... chỉ giúp shallow copy. Đổi trực tiếp thì k ảnh hưởng nhưng đổi reference nested thì ảnh hưởng => Chú ý đây là lỗi rất dễ nhầm tưởng là copy được
+const bientruoc = {name: "a", test: { name: "a" }};
+const biensau = { ...bientruoc };
+biensau.name = "b";
+biensau.test.name = "b";
+console.log(bientruoc); // {name: "a", test: { name: "b" }};
+
+const biensau2 = structuredClone(bientruoc);
+biensau2.test.name = "c";
+console.log(bientruoc); // k đổi

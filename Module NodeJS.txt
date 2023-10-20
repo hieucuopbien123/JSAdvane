@@ -190,6 +190,9 @@ Traditional Web <---> Server MVC ______/^
 
 => Tức tùy loại frontend khác nhau mà dùng gateway khác nhau
 
+-> Cơ chế API Gateway => ref tới "APIGateway.gif"
+Call http request -> API gateway bắt đầu bằng việc validate request -> chạy allow-list/deny-list check chỉ request đúng mới qua -> APIGateway làm việc với identity provider để authen và authorization -> check rate limit, nếu quá rate limit sẽ bị reject -> Dynamic routing thông qua path matching cái request để tìm đúng service thực hiện request -> transform request thành protocol hợp lý và gửi trả cho backend microservice thực hiện -> song song với việc thực thi đó, nó cũng check error (qua hệ thống log monitor với ElasticSearch) và tăng tốc với cache data (qua redis)
+
 -> Dùng API Gateway
 Có package npm express-gateway giúp chạy gateway cho server express nodejs luôn
 
@@ -218,5 +221,19 @@ A set giá trị cache. B set giá trị cache. B update DB. Lúc này A mới u
 
 
 # ElasticSearch
+
+
+
+# Version 20 nodejs
+-> Hỗ trợ sẵn env
+NodeJS đời đầu có thể dùng biến môi trường ngay tại command
+Để có config mạnh hơn có thể dùng dotenv
+NodeJS bản 20 mạnh nhất hỗ trợ sẵn built in env mà k cần lib dotenv
+
+Thông thường trong 1 dự án, ta có 3 môi trường: 
+- 1 là production để debug trên production với những bug critical chỉ có trên production
+- 2 là development là môi trường chung của hàng loạt dev
+- 3 là môi trường cá nhân, mỗi người 1 data custom. Cái này rất hay là khi ta cần code 1 tính năng mới, ta có thể setup docker thay thế cho mọi connect database remote và code độc lập trên môi trường của ta. 
+Ta chỉ cần thay data file .env là xong. Docker sẽ cung cho ta 1 môi trường tùy ý custom dữ liệu cho tính năng mới mà k ảnh hưởng môi trường dev chung.
 
 

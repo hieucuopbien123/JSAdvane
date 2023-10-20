@@ -34,6 +34,10 @@ Kiểu dữ liệu tham chiếu là kiểu có kích thước thay đổi nên k
 
 
 
+# Frontend
+
+
+
 # LRU cache
 Trong JS có WeakMap và WeakSet và WeakRef giúp giải phóng bộ nhớ reference tót hơn khi không sử dụng.
 Nhưng đối với bộ nhớ đệm từ xa thì k nên vì dữ liệu từ xa có thể bị xóa khỏi đệm 1 cách khó lường mà bên gọi không biết. Khi đó tốt nhất là sử dụng LRU cache
@@ -48,17 +52,18 @@ CMS (Content Management System) là hệ thống quản trị nội dung. VD ta 
 Strapi là 1 CMS giúp tạo serverless. Ta có thể vào tạo ra data bằng giao diện và nó tự tạo RESTful API hoặc GraphQL để tương tác luôn mà k cần code.
 
 CSRF (Cross site request forgery) là kiểu tấn công ta ấn vào link trang web này thì bị redirect đến 1 trang web khác đã đăng nhập và thực hiện lệnh k mong muốn
+=> ref tới "NodeJS / Module bảo mật server nodejs" giải thích chuẩn hơn
 XSS là lợi dụng input html vào web để lấy các thông tin bằng JS.
 
-CSRF chống tốt nhất là Double Submit Cookie bằng cách lưu 1 trường random vào cookie và yêu cầu gửi kèm. Action chỉ thực hiện khi giá trị trong cookie là đúng. Nếu tấn công như trên gọi từ trang web A vào trang web B sẽ k có trường random trong cookie tương ứng gửi kèm nên k thực hiện được.
-XSS thì mỗi vị trí input đều phải chống, biến input thành params chứ kp điền vào chỗ trống nữa.
+CSRF chống tốt nhất là Double Submit Cookie bằng cách lưu 1 trường random vào cookie và yêu cầu gửi kèm. Action chỉ thực hiện khi giá trị trong cookie là đúng. Nếu tấn công như trên gọi từ trang web A vào trang web B sẽ k có trường random trong cookie tương ứng gửi kèm nên k thực hiện được => được nhé vì webA gọi API tới webB sẽ k có cookie đó (chứ kp là webA redirect sang tab mới webB nhé vì redirect thì chả sao cả)
+XSS thì mỗi vị trí input đều phải chống, biến input thành params chứ kp điền vào chỗ trống rồi replace nữa.
 
 => Nhiều căn cứ cho thấy nên dùng cookie hơn vì httpOnly giúp cookie không thể truy cập bằng XSS mà chỉ thông qua http API, còn SameSite=Strict Secure giúp ngăn gửi cookie trong mọi cross-site khác. 
 
 Khi dùng localStorage thì phải chống XSS attack ở mọi nơi. Còn khi dùng cookie đã tự bảo vệ dữ liệu trong cookie khỏi XSS nhờ httpOnly rồi, nhưng ta lại phải chống CRSF attack
 Để chống CSRF attack thì client cần lưu CSRF token. Có nhiều cách lưu:
 - Lưu trong 1 biến JS: cách này được nhưng k hay vì lại phải chống XSS attack cản người dùng truy cập vào biến đó.
-- Lưu trong cookie (có httpOnly), server sẽ lấy từ cookie ra check => cách này hay vì tự cản XSS attack
+- Lưu trong cookie (có httpOnly), server sẽ lấy từ cookie ra check => cách này hay vì cũng tự cản XSS attack
 - Lưu là data của 1 hidden form field
 - Ghi vào code JS gửi qua 1 custom header, VD: X-CSRF-Token => cần cản người dùng truy cập được file js thuần đó
 

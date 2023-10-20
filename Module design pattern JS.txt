@@ -50,6 +50,9 @@ Khi cần thêm logic, chỉ cần thêm hàm or class mới và bổ sung case 
 Nếu chỉ có 2 cases quá ít hay xử lý ngắn thì việc chia ra lại làm code rối hơn
 
 -> ref tới "Java_OOP_SE / Design Pattern"
+-> ref tới "Project2 / ECommerce" xử lý hoàn hảo hơn cho usecase loại bỏ ifelse bằng biến mapping
+
+=> Factory pattern cũng giống strategy pattern nhưng là if else để create object mới chứ kp if else xử lý
 
 
 
@@ -257,6 +260,11 @@ Concrete implementation là thứ người dùng gọi thực sự để lấy d
 VD ở trên muốn tương tác table nào dùng loại DB nào cũng được.
 
 Trong dự án C# có dùng pattern này. Đó là class Repository xử lý từng database chính là bridge class để client tương tác đó.
+
+
+
+# Object Pattern cũng chỉ là khử if else bằng cách chia nhỏ thuộc tính trong từng cục if else thành 1 class riêng
+Kp lúc nào cũng dùng được vì chia nhỏ quá không tốt, nhiều lúc 1 class vẫn phải nhận nhiều thuộc tính và buộc phải if else thuộc tính đó bằng cj mà xử lý. VD 1 trường có 10 giá trị, ta k nên chia ra 10 class chỉ vì trường đó thì đúng là dở
 
 
 
