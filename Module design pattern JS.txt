@@ -24,7 +24,60 @@ K được fix hard code để tránh sửa nh
 -> I: phân tách giao diện
 
 -> D: class high level k phụ thuộc vào class low level. Cả 2 nên phụ thuộc vào abstraction.  
-VD: class A có biến class B và phụ thuộc vào class B => thế là k được. Khi đó ta tạo interface cho B rồi tạo instance cho interface đó trong A thay vì tạo instance của B trong A trực tiếp, vì A là high level mà phụ thuộc vào low level class trực tiếp là k được
+
+
+
+# Phân tích SOLID Dependency Inversion
+Class high level k phụ thuộc vào class low level, interface k được phụ thuộc vào implementation
+
+-> Cách code sai:
+class MusicPlayer {
+  private $file;
+  public function __construct() {
+    $this->file = new MP3MusicFile(); 
+  }
+  public function play() {
+    return $this->file->play();
+  }
+}
+=> Class MP3MusicFile đổi tên hay đổi nội dung thì MusicPlayer cũng phải đổi theo; Khó cho unit test; Nếu MusicPlayer mở rộng chạy nhiều loại file hơn sẽ toang
+
+Việc truyền MP3MusicFile vào trong __constructor sẽ tốt hơn nhưng vẫn chưa chuẩn DI
+
+--> Unit test: là kiểm thử từng đơn vị
+VD: function A() {
+  B(x);
+}
+=> Để kiểm thử hàm A, ta chỉ cần kiểm thử kiểu tham số truyền vào B là đúng hoặc B(x) chỉ được gọi 1 lần trong A. Ta k cần kiểm thử hàm B trong A chạy có đúng không vì unit test của hàm B phải lo điều đó
+Nếu hàm A nhận tham số kiểu X thì unit test phải mock biến X để truyền vào A, bắt mọi case thành công và case fail.
+
+Nếu hàm A mà dùng kiểu this->x = new X() hay còn gọi là hard dependency thì unit test sẽ rất khó vì k thể mock biến x để truyền vào được nữa, buộc phải gọi hàm để khởi tạo vì 2 cái phụ thuộc hoàn toàn vào nhau.
+Môi trường unit test phải độc lập nhưng có những TH như v sẽ khiến cho các test case phụ thuộc vào nhau hoặc ảnh hưởng ra hệ thống ngoài. VD class X là FileManager, tester sẽ k thể chạy test mà k ảnh hưởng tới hệ thống tệp được.
+
+-> ***Cách code chuẩn:
+class MusicPlayer {
+  private $file;
+  public function __construct(PlayerFile $file){
+    $this->file = $file;
+  }
+  public function play() {
+    return $this->file->play();
+  }
+}
+interface PlayerFile {
+  public function play();
+}
+class MP3File implements PlayerFile {
+  public function play() {
+    return "Play MP3 file!";
+  }
+}
+=> Sự phụ thuộc của 2 class đã giảm vì cả 2 cùng phụ thuộc vào 1 interface (mà interface rất khó thay đổi). Bây giờ dù đổi tên class MP3File hay thêm kiểu File mới thoải mái mà MusicPlayer k sửa gì:
+class FLACFile implements PlayerFile {
+  public function play() {
+    return "Play FLAC file!";
+  }
+}
 
 
 
@@ -52,7 +105,7 @@ Nếu chỉ có 2 cases quá ít hay xử lý ngắn thì việc chia ra lại l
 -> ref tới "Java_OOP_SE / Design Pattern"
 -> ref tới "Project2 / ECommerce" xử lý hoàn hảo hơn cho usecase loại bỏ ifelse bằng biến mapping
 
-=> Factory pattern cũng giống strategy pattern nhưng là if else để create object mới chứ kp if else xử lý
+=> Factory pattern cũng giống strategy pattern nhưng là if else để create object mới chứ kp if else xử lý. Có thể là mỗi loại Factory là 1 class riêng để tạo instance mới và gọi hoặc register vào 1 class và gọi
 
 
 

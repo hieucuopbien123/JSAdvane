@@ -193,8 +193,15 @@ Traditional Web <---> Server MVC ______/^
 -> Cơ chế API Gateway => ref tới "APIGateway.gif"
 Call http request -> API gateway bắt đầu bằng việc validate request -> chạy allow-list/deny-list check chỉ request đúng mới qua -> APIGateway làm việc với identity provider để authen và authorization -> check rate limit, nếu quá rate limit sẽ bị reject -> Dynamic routing thông qua path matching cái request để tìm đúng service thực hiện request -> transform request thành protocol hợp lý và gửi trả cho backend microservice thực hiện -> song song với việc thực thi đó, nó cũng check error (qua hệ thống log monitor với ElasticSearch) và tăng tốc với cache data (qua redis)
 
+--> Pb api gateway và load balancer:
+Load balancer chỉ làm công việc phân phối tải khi dịch vụ được duplicate ở nhiều nơi, làm v để giảm tải cho 1 server đỡ xử lý quá nhiều Request
+
+API gateway điều hướng request tới các dịch vụ khác nhau. Các dịch vụ này có thể cùng 1 server or ở các server riêng. 
+Trong TH cùng 1 server, việc dùng API gateway vẫn có ích vì nó hỗ trợ các giao thức xác thực, ghi log, chuyển đổi giao thức, bảo mật, cache nữa. Các công việc đó có thể làm riêng ở từng server nhưng thường tách ra riêng API gateway xử lý trong hệ thống microservice lớn.
+
 -> Dùng API Gateway
 Có package npm express-gateway giúp chạy gateway cho server express nodejs luôn
+Config file yaml để phân phối request của người dùng đến các url xử lý dịch vụ khác nhau
 
 
 
@@ -221,6 +228,23 @@ A set giá trị cache. B set giá trị cache. B update DB. Lúc này A mới u
 
 
 # ElasticSearch
+
+
+
+# Dùng fs stream
+Với các file lớn mấy GB, dùng fs stream xử lý giúp tối ưu bộ nhớ gấp trăm lần và tốc độ cũng nhanh hơn.
+Do nó chia file thành từng chunks và xử lý luôn thay vì load tất cả vào bộ nhớ và xử lý 1 lúc. Nên dùng stream mọi lúc, trừ khi có nhu cầu đọc toàn bộ file 1 lúc
+
+VD đọc 1 file và ghi vào 1 file khác, fs.readFile(..., (err,data) => { fs.writeFile(...) }) nên thay thế bằng: 
+(fs.createReadStream(...)).pipe(fs.createWriteStream(...));
+VD C# cũng có class tương tự:
+using (FileStream sourceStream = new FileStream("in.json", FileMode.Open)) {
+  using (FileStream destinationStream = new FileStream("out.json", FileMode.Create)) {
+    sourceStream.CopyTo(destinationStream);
+  }
+}
+
+Có thể xem memory của 1 tiến trình: chạy server như bth -> vào Task Manager tab Details -> Tìm tiến trình tên là "node". Mỗi request tới server sẽ thấy memory tiêu thụ của tiến trình này tăng lên để xử lý. 
 
 
 

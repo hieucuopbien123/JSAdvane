@@ -258,3 +258,14 @@ console.log(bientruoc); // {name: "a", test: { name: "b" }};
 const biensau2 = structuredClone(bientruoc);
 biensau2.test.name = "c";
 console.log(bientruoc); // k đổi
+
+// Tối ưu
+var list1 = ["a", "b"]; var list2 = ["c", "d"];
+console.log(list1.concat(list2)); // Mảng lớn có hiệu suất kém vì sex tạo mảng mới
+console.log(list1.push.apply(list1, list2));  // Tốt hơn vì k tao mảng mới mà apply vòa list1 luôn
+
+~~(1.2) // Thay thế Math.floor
+
+URL.canParse("https://www.facebook.com"); // Hàm mới check valid url
+
+

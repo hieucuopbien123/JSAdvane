@@ -1,0 +1,36 @@
+<body>
+  <script>
+    const concurrencyRequest = async (urls, maxNum) => {
+      if (urls.length === 0) {
+        return Promise.resolve([]);
+      }
+      const results = [];
+      let index = 0;
+      let count = 0; 
+      async function request() {
+        if (index === urls.length) return; 
+        const i = index; 
+        const url = urls[index++]; 
+        try {
+          results[i] = await fetch(url);
+        } catch (err) {
+          results[i] = err;
+        } finally {
+          if (++count === urls.length) {
+            console.log('Hoàn thành tất cả yêu cầu');
+            resolve(results);
+          }
+          setTimeout(request, 1000);
+        }
+      }
+      const times = Math.min(maxNum, urls.length);
+      console.log(`:::001::`, times);
+      Array.from({ length: times }, () => setTimeout(request, 1000));
+    };
+    const urls = [];
+    for (let i = 1; i <= 21; i++) {
+      urls.push(`https://jsonplaceholder.typicode.com/todos/${i}`);
+    }
+    concurrencyRequest(urls, 3)
+  </script>
+</body>

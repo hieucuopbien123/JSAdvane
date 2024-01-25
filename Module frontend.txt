@@ -2,6 +2,33 @@ Các kỹ thuật trong frontend
 
 
 # Dùng retryable
-//!!!!! Chờ phần 2
+Đừng để fetch 1 request nào đó 1 lần bị lỗi là dừng luôn và người dùng phải refresh page thủ công để fetch lại. Ta phải check status < 200 || status >= 300 thì retry. Retry request cũng ít khi dùng vì ta thg chỉ dùng khi bị lỗi mạng và biết rằng việc retry sẽ thành công. Nếu biết rằng retry request vẫn sẽ báo lỗi y như v thì nên kết thúc và show lỗi cho người dùng biết.
+
+Khi retry, k được retry liên tục và vô hạn để tránh server của ta quá tải, cho sleep tầm 3s rồi lại retry max 10 lần chẳng hạn
+
+Vẫn chưa ổn, giả sử hệ thống có rất nhiều người dùng cùng lúc, tự dưng đến 1 lúc server bị sập và tất cả các request tại thời điểm đó bị lỗi, xong họ retry liên tục đồng thời mỗi 3s thì kể từ đó, mỗi 3s thì số lượng request trùng lặp dần tăng lên trong 10 lần kế. Vì 3s sau lại có người mới vào, 6s sau lại có người mới vào.
+Giải pháp cho vấn đề này là cộng thêm 1 số random cho khoảng thời gian sleep là được. 
+
+Ta cx k nên retry mỗi 3s vì trong khoảng thời gian ngắn, xác suất request gặp lại lỗi cũ rất cao. Ta nên dùng giải pháp gọi là exponential backoff. Giải pháp này là các lần sau request sẽ phải chờ lâu hơn các lần trước. Nó xuất hiện trong các pp nhập mật khẩu, VD nhập sai càng nhiều sẽ chờ càng lâu hơn lần trước đó. Đồng thời max số lần retry nên để nhỏ thôi
+
+VD:
+static async fetchWithRetry(url, errorCount = 0) => {
+  const ERROR_COUNT_MAX = 3;
+  const response = await fetch(url);
+  if(response.status < 200 || response.status >= 300) {
+    // Log lỗi 
+    if(errorCount < ERROR_COUNT_MAX){
+      await new Promise(r => setTimeout(r, 
+        Math.pow(2, errorCount)*3000 + Math.random()*1000
+      ));
+      await this.fetchWithRetry(url, errorCount + 1);
+    }
+  }
+}
+=> Càng sai càng chờ lâu, liên tục trong 3 lần, cộng 1 khoảng random từ 0->1s
+
+
+
+# 
 
 

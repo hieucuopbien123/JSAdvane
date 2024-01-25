@@ -7,6 +7,8 @@ Trong đó, logstash là dịch vụ thu thập data được triển khai phía
 Tại sao k dùng elastic search thay thế cho database? Vì nó chỉ phục vụ search nhanh, lưu data dạng object, chỉ dùng cho hệ thống phân tán scale chiều ngang tốt. Còn database truyền thống có đủ tính ACID, lưu data dạng bảng, có relational giữa các bảng data, security tốt hơn.
 Elastic Search chỉ dùng cho full-text search, realtime analytics với unstructured data. SQL dùng cho complex relational data, transactions, structured dataa. MongoDB là NoSQL như ES nhưng data vẫn là có cấu trúc model cụ thể và data relationship phức tạp, có checking các thứ.
 
+Dùng SQL bth kết hợp index giúp tăng tốc nhưng với lượng data cực kỳ lớn, index bắt đầu vô dụng, thậm chí còn tốn thêm bộ nhớ vô ích, khi đó phải dùng elastic search
+
 
 
 # Basic
@@ -277,5 +279,12 @@ POST players/_search
   }
 }
 => max_expansions là max lấy 2 phần tử, default nó là 50 phần tử
+
+
+
+# Other
+-> Để đồng bộ data ở database và elasticsearch, ta có thể update database check thành công thì gọi update ES. 
+Nhưng làm v sẽ kém performance. Dùng đúng điểm lợi của microservice, ta nên nhét data cần udpate vào 1 message queue và kết thúc hàm của người dùng. 1 process sẽ check liên tục lấy từ queue ra update db.
+Khi đó nên có 1 hệ thống log lỗi nếu udpate elastic fail là được
 
 

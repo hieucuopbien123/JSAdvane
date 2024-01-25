@@ -13,6 +13,7 @@ switch case nhanh hơn if else đáng kể khi số lượng điều kiện lớ
 # Datatype trong JS
 Kiểu dữ liệu nguyên thủy là kiểu kích thước cố định nên đơn giản và cải thiện tốc độ truy vấn biến. Do đó được lưu trong ngăn xếp cố định nên truy cập theo giá trị.
 Kiểu dữ liệu tham chiếu là kiểu có kích thước thay đổi nên k được lưu trữ trong ngăn xếp cố định mà phải lưu trên heap và truy cập theo địa chỉ reference nên tốc độ truy vấn biến chậm hơn. Như array, object,...
+=> Các biến class trong C# được lưu trên heap, kể cả các class rỗng vì thực tế class rỗng thì hệ thống vẫn lưu nhiều trường ẩn lq đến nó. Lưu trên heap cũng giúp C# garbage collector tự động thu gom rác trên heap giải phóng bộ nhớ khi k còn tham chiếu mà k cần quan tâm đến phạm vi sử dụng (khi không còn biến nào trên stack lưu reference tới nó nữa)
 
 -> K dùng typeof (cho frontend)
 
@@ -35,6 +36,8 @@ Kiểu dữ liệu tham chiếu là kiểu có kích thước thay đổi nên k
 
 
 # Frontend
+-> Nhiều lúc có các component vào phát cần gọi 20 cái api 1 lúc. Nếu nhiều client sẽ rất nặng backend, mà backend k thể gom chung thành 1 vì mỗi data cần lấy từ nhiều nơi. 
+Khi đó nên push mọi requests vào 1 queue và gọi từng chunk max 3 api đồng thời để tránh quá tải server. Mục tiêu là tránh quá tải server chứ kp tối ưu frontend vì làm v có thể request bị lâu hơn.
 
 
 
@@ -88,4 +91,22 @@ Các ứng dụng thường dùng giải pháp an toàn như gửi qua mail hay 
 
 BlackList: Cho người dùng hoặc IP nào spam vào blacklist cấm luôn, Vd khi 1 người dùng gửi quá nhiều request trong 10s liên tiếp. Có thể lưu vào redis chẳng hạn.
 WhiteList: cấm mọi thứ trừ các IP và user trong whitelist
+
+-> Công nghệ của instagram:
+Ứng dụng đầu tiên là dùng cho iOS, frontend code bằng ObjectiveC với UIKit native luôn.
+Frontend request tới load balancer là từ cloud Amazon's Elastic Load balancer. Họ cũng sử dụng 3 instance NGINX để hỗ trợ
+Server chạy bằng DJango python với Gunicorn là WSGI Server (Web Server Gateway Interface). Họ dùng Fabric để chạy command đồng thời trên nhiều máy giúp deploy code trong vài giây
+Database dùng Postgres (nghiêm ngặt hơn MySQL).
+S3 và Cloudfront là cloud để lưu media
+Bộ đệm dùng redis và memcached. Redis lưu ảnh xạ 300 triệu ảnh tới user
+Push notification dùng pyapns là dịch vụ thông báo của apple
+Centri giúp ghi monitor log trong ứng dụng. 
+
+--> WSGI server là chuyên cho các app python nằm trung gian giữa ứng dụng và server. Cung tính năng pooling để kết nối hiệu quả, cung 1 giao diện chung cho các máy chủ web python nên ứng dụng web viết theo tiêu chuẩn của WSGI có thể chạy trên nhiều máy chủ khác nhau mà k cần sửa đổi.
+=> Nch là dùng máy chủ python thì nên thêm vào 1 WSGI server nx
+
+Fabric là một công cụ mã nguồn mở được thiết kế để giúp tự động hóa các nhiệm vụ quản lý hệ thống và triển khai ứng dụng tự động bằng Python.
+
+Amazon S3 (Simple Storage Service) cho phép lưu trữ và truy cập data từ bất kỳ đâu. Càng xa thì tốc dộ càng chậm. Do đó họ thường kết hợp thêm Amazon Cloudfront là dịch vụ CDN giúp phân phối nội dung tốc độ cao
+
 
